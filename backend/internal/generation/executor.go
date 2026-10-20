@@ -241,6 +241,11 @@ func validatePreparedInput(ctx context.Context, input Input) error {
 		return errors.New("后端生成任务缺少 Base URL、API Key 或模型名")
 	}
 	if err := validateInterfaceForContext(ctx, input.Mode, input.Config.InterfaceType); err != nil {
+		// Interface validation runs before image dispatch. Preserve this proof
+		// without reclassifying recovery of an already submitted provider job.
+		if input.Mode == "image" && ResumedProviderRequestID(ctx) == "" {
+			return RequestPreparationError{Cause: err}
+		}
 		return err
 	}
 	if IsVolcengineJiMengProtocol(input.Config.InterfaceType) && strings.TrimSpace(input.Config.SecretKey) == "" {

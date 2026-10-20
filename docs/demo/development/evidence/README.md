@@ -14,6 +14,12 @@ DEV-007 非 Seedream 图片服务验证，起始提交 `0cbccb9`，结果 Verifi
 
 原材料包括 `baseline-tests.log`、`regression.log`、`build.log`、`baseline-crash.png`、`fixed-dark.png`、`fixed-light.png`、`browser-results.json`、测试控制器失败 JSON/截图、`image-config-browser.mjs`、源码差异及摘要。截图准备问题与覆盖情况见[修复记录](../reports/FIX-IMAGE-CONFIG_20261020-212542.md)。后续 DEV-008 若复用该运行副本，任务新增以独立证据记录，不覆盖本轮零付费结论。
 
+## 20261020-213847-DEV-008
+
+手动任务与失败反馈修复，基线 `1006882`。真实成功链路复用 DEV-007，不追加付费调用。本地未安装接口的校验失败不再误报未知提交，保留未知响应和既有供应商任务保护。最终受控浏览器三次点击仅一个本地失败任务、上游零请求，助手 API 被屏蔽后手动入口仍可用；失败后编辑保存通过。Go 40 主测试/36 子测试及前端 16 项通过。
+
+原文件包括 `baseline.log`、`go-tests.jsonl`、`web-tests.log`、`before.json`、`after.json`、`browser-result.json`、`manual-local-failure.png`、`audit.json`、`cleanup-final.json`、`source.patch`、源码摘要和 `dev008-browser.mjs`。`first-candidate/` 保留内部 failure_code 尚未修正的首轮结果；本项两个受控失败任务均无上游请求。详见[DEV-008 报告](../reports/DEV-008_20261020-213847-DEV-008.md)。
+
 ## 20261020-202155-DEV-006
 
 DEV-006 稳定对象定位，结果 Fixed（Mac），起始提交 `c86ca713f8e00ed1336e7f2c8b8caaf4f861257d`。真实基线复现发送后重排误改补位行；修复后六场景通过，发送时顺序由已有轮前快照派生，正式 Durable 输入、工具回执及业务数据对应。完全退出后的新进程/新浏览器恢复通过，最终 revision 49；21 次文本模型 dispatch，无媒体任务，测试服务均已停止。
