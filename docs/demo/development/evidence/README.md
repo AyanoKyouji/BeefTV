@@ -30,3 +30,11 @@ DEV-004-01 对象编辑、稳定身份及持久化验证，结果为 Verified。
 原文件包括 `run.json`、`result.json`、`backend-storyboard.log`、`web-storyboard.log`、`runtime-build.log`、`runtime-live-1.log`、`runtime-live-2.log`、`vite-live-1.log`、`vite-live-2.log`、`initial-document.json`、`control-before-edit.json`、`edited-fields.json`、`duplicate-identity.json`、`identities.json`、`before-restart.json`、`after-restart.json`、`restart-comparison.json`、`process-stop.json`、`process-restart.json`、`sqlite-closed-process-comparison.json`、`dev004-browser.mjs`、`desktop-runtime.go.txt`、浏览器操作/失败日志及截图。自动化定位失败与比较字段修正见[任务报告](../reports/DEV-004-01_20261020-163206-DEV-004-01.md)。运行时凭据仅在隔离数据目录保存，不加入证据发布。
 
 没有真实模型调用、Mac 原生窗口或本轮 Windows 验证；DEV-004-02、03 尚未执行。
+
+## 20261020-165126-DEV-004-02
+
+DEV-004-02 真实 Agent 读取项目对象，结果为 Verified，基线 `5e21fa9`。用户授权中转的 `deepseek-flash` 经正式 Go/Node/Durable 工具链完成一个只读回合，4 次模型 dispatch、5 次 `canvas.get`。正式工具结果与 Go 业务读取及 SQLite 一致：两个 Script 的六行完整对象、文本节点及目标行 24 个字段对应；业务文档保持 revision 17，没有生成任务或产品代码修改。
+
+原文件包括 `run.json`、`result.json`、`model-discovery.json`、`host-status.json`、`runtime-live.log`、`vite-live.log`、`browser.log`、`before-agent.json`、`after-agent.json`、`user-prompt.json`、`agent-stream.ndjson`、`agent-history.json`、`agent-body.txt`、`agent-read.png`、`browser-result.json`、`durable-tool-results.json`、`durable-entries.json`、`tool-business-comparison.json`、`model-usage.json`、`cleanup.json`、`dev00402-browser.mjs`、`dev00402-audit.py`。本地模型密钥与运行凭据不加入证据发布，公开材料省略实际中转地址。
+
+真实模型读取通过不代表真实模型创建/写入、即时编辑时序、图片生成、Mac 原生窗口或 Windows 回归已通过；范围见[任务报告](../reports/DEV-004-02_20261020-165126-DEV-004-02.md)。
