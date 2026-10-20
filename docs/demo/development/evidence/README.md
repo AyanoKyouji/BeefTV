@@ -46,3 +46,13 @@ DEV-004-03 真实 Agent 创建三个分镜，结果为 Verified（Mac 开发联�
 三条新行 ID 唯一，第二镜人工编辑四个字段后 ID/归属保持正确。完全关闭 Go/Vite/Node 后，以全新进程和浏览器资料恢复，完整文档、三行及修改、Agent 历史一致，最终 revision 23；没有生成任务或产品代码修改。DEV-004 三个子项均通过，最终 Windows 验收保留。
 
 原文件包括 `run.json`、`result.json`、`user-prompt.json`、`agent-stream.ndjson`、`agent-history.json`、`before-agent.json`、`after-agent.json`、`existing-node-comparison.json`、`identities.json`、`manual-edit.json`、`before-restart.json`、`after-restart.json`、`restart-comparison.json`、`restored-history.json`、`cold-stop.json`、`cleanup.json`、`durable-entries.json`、`durable-tool-results.json`、`tool-business-comparison.json`、`runtime-live-1.log`、`runtime-live-2.log`、`vite-live-1.log`、`vite-live-2.log`、各浏览器成功/失败日志及截图、`dev00403-browser.mjs`、`dev00403-audit.py`、`desktop-runtime.go.txt`。具体失败、恢复与验证范围见[任务报告](../reports/DEV-004-03_20261020-170041-DEV-004-03.md)。模型配置、密钥及运行凭据不发布。
+
+## 20261020-171515-DEV-005
+
+DEV-005 发送前提交屏障，结果为 Fixed（Mac），起始基线 `a018bc448393fe826f3b31fd6c37d8634b2e1c06`。基线受控复现聊天先于保存，拦截聊天避免调用模型；修复复用现有保存队列，在实际消息/补充请求前确认保存。最终五场景通过，正式工具返回与业务行 24 个字段、ID/版本一致，保存失败聊天增加 0，旧模型写入 HTTP 409，用户并发编辑保留，最终 revision 40。
+
+有效验收四个模型回合 9 次 dispatch；计入候选和测试脚本失败尝试，本轮实际总计 22 次。去重专项检查 42 PASS，类型检查、前端构建、lint 通过。旧测试信号导致的工具超时、旧源码断言失败及修正原文均保留，未计为通过；见[任务报告](../reports/DEV-005_20261020-171515-DEV-005.md)。
+
+原材料包括 `run.json`、`result.json`、`baseline-result.json`、`baseline-events.json`、`scenario-results.json`、`verification-start.json`、`verify-events.json`、`T05-final-events.json`、各场景 history/document/stream JSON 与 NDJSON、`row-update-arrived.json`、`business-http.ndjson`、`durable-entries.json`、`durable-tool-results.json`、`final-document.json`、`cleanup-final.json`、`source.patch`、`validated-source-hashes.json`、`web-regression.log`、`assistant-barrier-final.log`、`storage-regression.log`、`storage-regression-2.log`、`typecheck.log`、`web-build-final.log`、`lint.log`、`privacy-check.json`、运行/浏览器日志及截图。`first-candidate/` 和 `stale-test-gate-attempt/` 保留中间结果；`dev005-browser.mjs`、`dev005-audit.py`、`desktop-runtime.go.txt` 保存控制和只读核对方法。
+
+原始凭据及中转地址不发布；没有本轮原生窗口、Windows 或真实图片/视频验收。

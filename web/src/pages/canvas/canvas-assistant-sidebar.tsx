@@ -231,7 +231,7 @@ export function CanvasAssistantSidebar(props: Props) {
                         {assistant.supplements.map((item, index) => <div key={index}>
                             <CanvasAssistantUserMessage text={item.text} selectedCount={0} />
                             <CanvasAssistantAttachments attachments={item.attachments || []} />
-                            <p className="canvas-assistant-meta" role="status">{item.status === "accepted" ? "助手已收到补充要求。" : item.status === "sending" ? "正在发送补充要求…" : "未能确认收到补充要求。请查看最新回复后再决定是否发送。"}</p>
+                            <p className="canvas-assistant-meta" role="status">{item.status === "accepted" ? "助手已收到补充要求。" : item.status === "sending" ? "正在发送补充要求…" : item.status === "not-sent" ? "画布还没保存成功，补充要求未发送，请先保存后重试。" : "未能确认收到补充要求。请查看最新回复后再决定是否发送。"}</p>
                         </div>)}
                         {assistantVisibleReply(assistant.streamed || "") ? <CanvasAssistantReply text={assistant.streamed} /> : null}
                         {assistant.streaming && (assistant.lifecycleNotice || !assistantVisibleReply(assistant.streamed || "")) ? (
@@ -242,7 +242,7 @@ export function CanvasAssistantSidebar(props: Props) {
 
                 {!assistant.pendingUserText && !assistant.pendingAttachments.length ? assistant.supplements.filter(item => item.status !== "accepted").map((item, index) => <div key={`unconfirmed:${index}`}>
                     <CanvasAssistantUserMessage text={item.text} selectedCount={0} />
-                    <p className="canvas-assistant-meta" role="status">{item.status === "sending" ? "正在确认补充要求是否收到…" : "未能确认收到补充要求。请查看最新回复后再决定是否发送。"}</p>
+                    <p className="canvas-assistant-meta" role="status">{item.status === "sending" ? "正在确认补充要求是否收到…" : item.status === "not-sent" ? "画布还没保存成功，补充要求未发送，请先保存后重试。" : "未能确认收到补充要求。请查看最新回复后再决定是否发送。"}</p>
                 </div>) : null}
 
                 {assistant.error ? (

@@ -444,7 +444,8 @@ export function useCanvasProjectLifecycle({
     }, [currentProject, renameProject]);
 
     const persistLocalEdits = useCallback(async () => {
-        if (!projectLoaded || editorProjectIdRef.current !== projectId) return;
+        const owner = captureUserScope();
+        if (!projectLoaded || editorProjectIdRef.current !== projectId) throw new Error("画布尚未载入，无法保存");
         const snapshot = { nodes: nodesRef.current, connections: connectionsRef.current, chatSessions, activeChatId, canvasAppearance, backgroundMode, showImageInfo };
         if (observedContentRef.current && JSON.stringify(observedContentRef.current) !== JSON.stringify(snapshot)) {
             traceCanvasGraph("editor.explicitSave", { observed: { id: projectId, ...observedContentRef.current }, live: { id: projectId, ...snapshot }, stored: useCanvasStore.getState().openProject(projectId) });
@@ -462,8 +463,25 @@ export function useCanvasProjectLifecycle({
         }
         updateProject(projectId, { viewport: viewportRef.current });
         await flushCanvasStorePersistence();
-        if (localMode) await syncLocalCanvasProjectToBackend(projectId);
+        assertUserScope(owner);
+        if (editorProjectIdRef.current !== projectId) throw new Error("画布已切换，未继续提交");
+        if (localMode) await syncLocalCanvasProjectToBackend(projectId, owner);
     }, [activeChatId, backgroundMode, canvasAppearance, chatSessions, connectionsRef, localMode, nodesRef, projectId, projectLoaded, showImageInfo, updateProject, viewportRef]);
+
+    const flushCanvasProjectForAssistant = useCallback(async (canvasId: string, signal: AbortSignal) => {
+        const owner = captureUserScope();
+        do {
+            assertUserScope(owner);
+            signal.throwIfAborted();
+            if (canvasId !== projectId || editorProjectIdRef.current !== canvasId || !useCanvasStore.getState().openProject(canvasId)) {
+                throw new Error("画布已切换或不存在，未发送消息");
+            }
+            await persistLocalEdits();
+            assertUserScope(owner);
+            signal.throwIfAborted();
+            if (!localMode) await saveRemoteUserDataNow(canvasId);
+        } while (hasUnconfirmedCanvasEdits(canvasId) && localMode);
+    }, [localMode, persistLocalEdits, projectId]);
 
     const reloadLatestCanvasProject = useCallback(async () => {
         await persistLocalEdits();
@@ -535,6 +553,7 @@ export function useCanvasProjectLifecycle({
         reloadLatestCanvasProject,
         restoreCanvasProjectVersion,
         saveCanvasProject,
+        flushCanvasProjectForAssistant,
         forceSaveCanvasProject,
         updateProject,
     };

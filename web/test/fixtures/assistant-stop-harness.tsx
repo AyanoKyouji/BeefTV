@@ -8,7 +8,12 @@ if (location.search.includes("scope-test")) { document.cookie = "test-user=A"; s
 
 
 function Harness() {
-    const assistant = useCanvasAssistant({ canvasId: "c1" });
+    const assistant = useCanvasAssistant({ canvasId: "c1", beforeSend: location.search.includes("save-barrier") ? async (_canvasId, _signal) => {
+        const control = (window as any).__saveBarrier;
+        control.entered = true;
+        if (control.pending) await control.pending;
+        if (control.failure) throw new Error("Synthetic canvas save failure");
+    } : undefined });
     return <main>
         <button onClick={() => void assistant.restartHost()}>刷新状态</button>
         <output data-testid="status-reason">{assistant.status?.reason || ""}</output>
@@ -27,4 +32,5 @@ function Harness() {
         <output data-testid="history">{assistant.turns.map(turn => turn.reply).join("\n")}</output>
     </main>;
 }
+if (location.search.includes("save-barrier")) (window as any).__saveBarrier = { entered: false, failure: false, pending: null };
 createRoot(document.getElementById("root")!).render(<Harness />);

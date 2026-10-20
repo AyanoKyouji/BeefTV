@@ -94,7 +94,7 @@ type CanvasRun = {
     streaming: boolean;
     lifecycleNotice: string | null;
     supplementBusy: boolean;
-    supplements: { text: string; status: "sending" | "accepted" | "unconfirmed"; attachments?: AssistantAttachment[]; skills?: AssistantSkillSelection[] }[];
+    supplements: { text: string; status: "sending" | "accepted" | "unconfirmed" | "not-sent"; attachments?: AssistantAttachment[]; skills?: AssistantSkillSelection[] }[];
     controller: AbortController | null;
     error: string | null;
     lastSent: { text: string; selectedNodeIds: string[]; references: AgentChatReference[]; attachments?: AssistantAttachment[]; skills?: AssistantSkillSelection[]; permissionMode: AssistantPermissionMode } | null;
@@ -131,6 +131,7 @@ const createRun = (): CanvasRun => ({
 
 type Options = {
     canvasId: string;
+    beforeSend?: (canvasId: string, signal: AbortSignal) => Promise<void>;
     /** 回合落地后画布要立刻拉取最新内容，并把改动过的节点高亮出来。 */
     onCanvasChanged?: (canvasId: string, changedNodeIds: string[]) => void;
 };
@@ -151,7 +152,7 @@ function readStoredProposals(): Set<string> {
  * 每个画布各持一条运行记录：发送时冻结画布归属，异步结果只写回当时那条记录，
  * 切画布不会把回复落到别的画布上。已结束的回合来自服务端历史，刷新页面不丢。
  */
-export function useCanvasAssistant({ canvasId, onCanvasChanged }: Options) {
+export function useCanvasAssistant({ canvasId, onCanvasChanged, beforeSend }: Options) {
     const [open, setOpenState] = useState(() => scopedLocalStorage.getItem(OPEN_STORAGE_KEY) !== "0");
     const [width, setWidthState] = useState(() => clampAssistantWidth(Number(scopedLocalStorage.getItem(WIDTH_STORAGE_KEY)) || ASSISTANT_DEFAULT_WIDTH));
     const [status, setStatus] = useState<AgentHostStatus | null>(null);
@@ -169,6 +170,8 @@ export function useCanvasAssistant({ canvasId, onCanvasChanged }: Options) {
     activeCanvasRef.current = canvasId;
     const onCanvasChangedRef = useRef(onCanvasChanged);
     onCanvasChangedRef.current = onCanvasChanged;
+    const beforeSendRef = useRef(beforeSend);
+    beforeSendRef.current = beforeSend;
 
     const runFor = useCallback((id: string): CanvasRun => {
         const key = runPrefix + id;
@@ -332,17 +335,31 @@ export function useCanvasAssistant({ canvasId, onCanvasChanged }: Options) {
         const attachments = (input.attachments || []).map(item => ({ ...item }));
         const skills = (input.skills || []).map(item => ({ ...item }));
         const run = runFor(targetCanvas);
+        const prepareCanvas = beforeSendRef.current;
+        const flushBeforeSend = async (signal: AbortSignal) => {
+            try {
+                await prepareCanvas?.(targetCanvas, signal);
+            } catch {
+                assertUserScope(expectedScope);
+                signal.throwIfAborted();
+                throw new AgentChatNotAdmittedError("画布还没保存成功，消息未发送，请先保存后重试");
+            }
+            assertUserScope(expectedScope);
+            signal.throwIfAborted();
+        };
         if (run.streaming) {
             if (!run.dispatched || !run.sessionId || run.supplementBusy) return;
-            const supplement = { text: message, attachments, skills, status: "sending" as "sending" | "accepted" | "unconfirmed" };
+            const supplement = { text: message, attachments, skills, status: "sending" as "sending" | "accepted" | "unconfirmed" | "not-sent" };
             run.supplements.push(supplement);
             run.supplementBusy = true;
             rerenderIfActive(targetCanvas);
             try {
+                await flushBeforeSend(run.controller?.signal ?? new AbortController().signal);
                 await steerAgentChat(targetCanvas, run.sessionId, message, { attachments, skills, references: referenceSnapshot });
                 supplement.status = "accepted";
-            } catch {
-                supplement.status = "unconfirmed";
+            } catch (error) {
+                if (!userScopeMatches(expectedScope)) return;
+                supplement.status = error instanceof AgentChatNotAdmittedError ? "not-sent" : "unconfirmed";
             } finally {
                 run.supplementBusy = false;
                 rerenderIfActive(targetCanvas);
@@ -383,6 +400,7 @@ export function useCanvasAssistant({ canvasId, onCanvasChanged }: Options) {
             assertUserScope(expectedScope);
             if (!run.sessionId) run.sessionId = await createAssistantSession(targetCanvas);
             assertUserScope(expectedScope);
+            await flushBeforeSend(controller.signal);
             controller.signal.throwIfAborted();
             run.recovery = { sessionId: run.sessionId, knownTurnIds: run.turns.map((turn) => turn.turnId), text: message, selectedNodeIds: selectedSnapshot };
             run.dispatched = true;

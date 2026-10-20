@@ -4,13 +4,15 @@ import { chromium, type Browser } from "playwright";
 
 let browser: Browser, server: ReturnType<typeof Bun.serve>;
 let cancelled = false, historyFailure = false, settle = false;
-let chatRequests = 0, cancelRequests = 0;
+let chatRequests = 0, cancelRequests = 0, steerRequests = 0;
 let rejectChat = false;
 let scopeTest = false, holdOldHistory = false, configurationBlocked = false, seedHistoricalTurn = false, historyFailureReason = "host_unreachable", historyReads = 0;
 let oldHistoryResolve: ((response: Response) => void) | null = null, oldSteerResolve: ((response: Response) => void) | null = null;
 const steerUsers: string[] = [];
+let statusGate: Promise<void> | undefined;
+let statusBlocked = false;
 
-beforeEach(() => { cancelled = false; historyFailure = false; settle = false; chatRequests = 0; cancelRequests = 0; scopeTest = false; holdOldHistory = false; configurationBlocked = false; seedHistoricalTurn = false; historyFailureReason = "host_unreachable"; historyReads = 0; oldHistoryResolve = null; oldSteerResolve = null; steerUsers.length = 0; });
+beforeEach(() => { cancelled = false; historyFailure = false; settle = false; chatRequests = 0; cancelRequests = 0; steerRequests = 0; scopeTest = false; holdOldHistory = false; configurationBlocked = false; seedHistoricalTurn = false; historyFailureReason = "host_unreachable"; historyReads = 0; oldHistoryResolve = null; oldSteerResolve = null; steerUsers.length = 0; });
 beforeAll(async () => {
     const build = await Bun.build({ entrypoints: [import.meta.dir + "/fixtures/assistant-stop-harness.tsx"], target: "browser", define: {
         "import.meta.env.DEV": "false", "import.meta.env.PROD": "true", "import.meta.env.MODE": '"production"',
@@ -23,6 +25,7 @@ beforeAll(async () => {
     const ok = (data: unknown) => Response.json({ code: 0, data });
     server = Bun.serve({ port: 0, async fetch(req) {
         const pathname = new URL(req.url).pathname;
+        if (pathname.endsWith("/assistant/steer")) steerRequests++;
         if (pathname === "/harness.js") return new Response(js, { headers: { "content-type": "application/javascript" } });
         const user = req.headers.get("cookie")?.includes("test-user=B") ? "B" : "A";
         if (scopeTest && pathname.endsWith("/assistant/sessions")) return ok({ currentSessionId: "session-" + user, sessions: [] });
@@ -36,7 +39,10 @@ beforeAll(async () => {
             return ok({ accepted: true });
         }
         if (pathname.endsWith("/assistant/ui-session")) return ok({ token: "synthetic-only", expiresAt: new Date(Date.now() + 1800000).toISOString() });
-        if (pathname.endsWith("/assistant/status")) return ok(configurationBlocked ? { available: false, reason: "model_not_configured" } : { available: true });
+        if (pathname.endsWith("/assistant/status")) {
+            if (statusGate) { statusBlocked = true; await statusGate; }
+            return ok(configurationBlocked ? { available: false, reason: "model_not_configured" } : { available: true });
+        }
         if (pathname.endsWith("/assistant/sessions")) { if (configurationBlocked) return Response.json({ code: 503, reason: historyFailureReason }, { status: 503 }); return ok({ currentSessionId: "s1", sessions: [] }); }
         if (pathname.endsWith("/assistant/history")) {
             historyReads++;
@@ -61,6 +67,81 @@ beforeAll(async () => {
     browser = await chromium.launch({ executablePath, headless: true });
 }, 60000);
 afterAll(async () => { await browser?.close(); server?.stop(true); });
+
+test("canvas preflight runs after pending host readiness, immediately before dispatch", async () => {
+    const page = await browser.newPage();
+    let release!: () => void;
+    try {
+        await page.goto(server.url.toString() + "?save-barrier");
+        statusBlocked = false;
+        statusGate = new Promise(resolve => { release = resolve; });
+        await page.getByRole("button", { name: "开始", exact: true }).click();
+        for (let count = 0; !statusBlocked && count < 100; count++) await Bun.sleep(10);
+        expect(statusBlocked).toBe(true);
+        expect(await page.evaluate(() => (window as any).__saveBarrier.entered)).toBe(false);
+        expect(chatRequests).toBe(0);
+        statusGate = undefined;
+        release();
+        await page.getByTestId("streamed").filter({ hasText: "两个草案已创建" }).waitFor();
+        expect(await page.evaluate(() => (window as any).__saveBarrier.entered)).toBe(true);
+        expect(chatRequests).toBe(1);
+    } finally { statusGate = undefined; release?.(); await page.close(); }
+}, 15000);
+
+test("supplements wait for the canvas and distinguish a failed save from uncertain delivery", async () => {
+    const page = await browser.newPage();
+    try {
+        await page.goto(server.url.toString() + "?save-barrier");
+        await page.getByRole("button", { name: "开始", exact: true }).click();
+        await page.getByTestId("streamed").filter({ hasText: "两个草案已创建" }).waitFor();
+        await page.evaluate(() => {
+            const control = (window as any).__saveBarrier;
+            control.entered = false;
+            control.pending = new Promise(resolve => { control.release = resolve; });
+        });
+        await page.getByRole("button", { name: "补充", exact: true }).click();
+        await page.waitForFunction(() => (window as any).__saveBarrier.entered);
+        expect(steerRequests).toBe(0);
+        await page.evaluate(() => {
+            const control = (window as any).__saveBarrier;
+            control.failure = true;
+            control.release();
+        });
+        await page.getByTestId("supplements").filter({ hasText: "补充A:not-sent" }).waitFor();
+        expect(steerRequests).toBe(0);
+        expect(chatRequests).toBe(1);
+    } finally { await page.close(); }
+}, 15000);
+
+for (const outcome of ["release", "reject", "stop", "switch-account"] as const) test(`canvas save barrier: ${outcome} before model dispatch`, async () => {
+    const page = await browser.newPage();
+    const before = chatRequests;
+    try {
+        await page.goto(server.url.toString() + "?save-barrier");
+        await page.evaluate(() => {
+            const control = (window as any).__saveBarrier;
+            control.pending = new Promise(resolve => { control.release = resolve; });
+        });
+        await page.getByRole("button", { name: "开始", exact: true }).click();
+        await page.waitForFunction(() => (window as any).__saveBarrier.entered);
+        expect(chatRequests).toBe(before);
+        if (outcome === "stop") await page.getByRole("button", { name: "停止", exact: true }).click();
+        if (outcome === "switch-account") await page.getByRole("button", { name: "切换用户", exact: true }).click();
+        await page.evaluate(fail => {
+            const control = (window as any).__saveBarrier;
+            control.failure = fail;
+            control.release();
+        }, outcome === "reject");
+        if (outcome === "release") {
+            await page.getByTestId("streamed").filter({ hasText: "两个草案已创建" }).waitFor();
+            expect(chatRequests).toBe(before + 1);
+        } else {
+            await page.waitForFunction(() => document.querySelector('[data-testid="streaming"]')?.textContent === "false");
+            expect(chatRequests).toBe(before);
+            if (outcome === "reject") expect(await page.getByTestId("error").innerText()).toContain("消息未发送");
+        }
+    } finally { await page.close(); }
+}, 15000);
 
 test("rejected oversized input leaves the real hook able to send another message", async () => {
     const page = await browser.newPage();

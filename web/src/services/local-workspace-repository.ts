@@ -574,7 +574,12 @@ function shouldKeepCanvasCommitIdentity(error: unknown) {
 }
 
 export function syncLocalCanvasProjectToBackend(id: string, expectedScope?: CapturedUserScope): Promise<void> {
-    return syncLocalCanvasProject(id, expectedScope ?? captureUserScope());
+    const expected = expectedScope ?? captureUserScope();
+    const key = saveKey(expected.userScope, id);
+    const timer = backendSaveTimers.get(key);
+    if (timer) clearTimeout(timer);
+    backendSaveTimers.delete(key);
+    return syncLocalCanvasProject(id, expected);
 }
 
 function sameDocumentValue(left: unknown, right: unknown) {
