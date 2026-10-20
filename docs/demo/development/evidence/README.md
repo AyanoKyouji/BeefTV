@@ -38,3 +38,11 @@ DEV-004-02 真实 Agent 读取项目对象，结果为 Verified，基线 `5e21fa
 原文件包括 `run.json`、`result.json`、`model-discovery.json`、`host-status.json`、`runtime-live.log`、`vite-live.log`、`browser.log`、`before-agent.json`、`after-agent.json`、`user-prompt.json`、`agent-stream.ndjson`、`agent-history.json`、`agent-body.txt`、`agent-read.png`、`browser-result.json`、`durable-tool-results.json`、`durable-entries.json`、`tool-business-comparison.json`、`model-usage.json`、`cleanup.json`、`dev00402-browser.mjs`、`dev00402-audit.py`。本地模型密钥与运行凭据不加入证据发布，公开材料省略实际中转地址。
 
 真实模型读取通过不代表真实模型创建/写入、即时编辑时序、图片生成、Mac 原生窗口或 Windows 回归已通过；范围见[任务报告](../reports/DEV-004-02_20261020-165126-DEV-004-02.md)。
+
+## 20261020-170041-DEV-004-03
+
+DEV-004-03 真实 Agent 创建三个分镜，结果为 Verified（Mac 开发联调），基线 `60162e5b47f54b4cdbafdd4cfe9dac2ecc814168`。一个真实 `deepseek-flash` 回合完成 Script 创建与三行追加，官方写入回执及模型字段与业务对象一致；9 次模型 dispatch、10 次官方工具执行，其中两次旧版本读取被拒绝后恢复。原四个节点除编辑器更新时间外，业务字段全部保留。
+
+三条新行 ID 唯一，第二镜人工编辑四个字段后 ID/归属保持正确。完全关闭 Go/Vite/Node 后，以全新进程和浏览器资料恢复，完整文档、三行及修改、Agent 历史一致，最终 revision 23；没有生成任务或产品代码修改。DEV-004 三个子项均通过，最终 Windows 验收保留。
+
+原文件包括 `run.json`、`result.json`、`user-prompt.json`、`agent-stream.ndjson`、`agent-history.json`、`before-agent.json`、`after-agent.json`、`existing-node-comparison.json`、`identities.json`、`manual-edit.json`、`before-restart.json`、`after-restart.json`、`restart-comparison.json`、`restored-history.json`、`cold-stop.json`、`cleanup.json`、`durable-entries.json`、`durable-tool-results.json`、`tool-business-comparison.json`、`runtime-live-1.log`、`runtime-live-2.log`、`vite-live-1.log`、`vite-live-2.log`、各浏览器成功/失败日志及截图、`dev00403-browser.mjs`、`dev00403-audit.py`、`desktop-runtime.go.txt`。具体失败、恢复与验证范围见[任务报告](../reports/DEV-004-03_20261020-170041-DEV-004-03.md)。模型配置、密钥及运行凭据不发布。
