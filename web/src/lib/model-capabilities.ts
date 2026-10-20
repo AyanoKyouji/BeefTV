@@ -129,23 +129,33 @@ function normalizeCapabilityStrings(values: unknown[]) {
     return Array.from(new Set(values.map(normalizeCapabilityString)));
 }
 
-export function normalizeModelCapabilityConfig(config: ModelCapabilityConfig): ModelCapabilityConfig {
+export function normalizeModelCapabilityConfig(config: ModelCapabilityConfig, imageDefaults = defaultImageCapabilityConfig()): ModelCapabilityConfig {
+    // Persisted custom profiles can omit nested fields. Fill them before UI
+    // consumers read arrays, retaining explicit false, zero and empty arrays.
     return {
         ...config,
+        version: config.version ?? 1,
         text: config.text ? { ...config.text, streaming: config.text.streaming !== false } : config.text,
         image: config.image
             ? {
+                  ...imageDefaults,
                   ...config.image,
+                  references: { ...imageDefaults.references, ...config.image.references },
                   size: {
+                      ...imageDefaults.size,
                       ...config.image.size,
-                      values: normalizeCapabilityStrings(config.image.size.values),
-                      default: normalizeCapabilityString(config.image.size.default),
+                      values: normalizeCapabilityStrings(Array.isArray(config.image.size?.values) ? config.image.size.values : imageDefaults.size.values),
+                      default: normalizeCapabilityString(config.image.size?.default ?? imageDefaults.size.default),
                   },
                   quality: {
+                      ...imageDefaults.quality,
                       ...config.image.quality,
-                      values: normalizeCapabilityStrings(config.image.quality.values),
-                      default: normalizeCapabilityString(config.image.quality.default),
+                      values: normalizeCapabilityStrings(Array.isArray(config.image.quality?.values) ? config.image.quality.values : imageDefaults.quality.values),
+                      default: normalizeCapabilityString(config.image.quality?.default ?? imageDefaults.quality.default),
                   },
+                  transparentBackground: { ...imageDefaults.transparentBackground, ...config.image.transparentBackground },
+                  responseFormat: { ...imageDefaults.responseFormat, ...config.image.responseFormat },
+                  outputFormat: { ...imageDefaults.outputFormat, ...config.image.outputFormat },
               }
             : undefined,
         video: config.video
@@ -694,7 +704,7 @@ export function modelCapabilityConfigFor(
         alignMaterialPixels(fallback.video);
         return fallback;
     }
-    const capabilityConfig = normalizeModelCapabilityConfig(profile.capabilityConfig);
+    const capabilityConfig = normalizeModelCapabilityConfig(profile.capabilityConfig, fallback.image);
     const text = capabilityConfig.text ? { ...fallback.text!, ...capabilityConfig.text, references: { ...fallback.text!.references, ...capabilityConfig.text.references } } : fallback.text;
     const video = (capabilityConfig.video ? { ...fallback.video!, ...capabilityConfig.video, references: { ...fallback.video!.references, ...capabilityConfig.video.references } } : fallback.video)!;
     alignMaterialPixels(video);

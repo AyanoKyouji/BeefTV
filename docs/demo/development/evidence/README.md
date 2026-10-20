@@ -8,6 +8,12 @@ DEV-007 非 Seedream 图片服务验证，起始提交 `0cbccb9`，结果 Verifi
 
 原始文件包括 `model-catalog.json`、`selected-model.json`、`plugin-ready.json`、`submitted-request.json`、`task-identity.json`、`task-states.json`、`task-summary.json`、`result-audit.json`、`initial-document.json`、`image-node.json`、`before-generation.json`、`after-generation.json`、`dev-proxy-auth.json`、`before-cold-restart.json`、`after-restart.json`、`restore-result.json`、`cold-stop.json`、`cold-stop-settled.json`、`cleanup-final.json`、`web-build.log`、源码差异/摘要、浏览器脚本、核对脚本及截图；`preflight-plugin-missing/` 保存初次本地失败记录。图片文件和数据库位于隔离开发数据目录。实际中转地址、API Key、owner 凭据、原始响应均不发布；详见[DEV-007 报告](../reports/DEV-007_20261020-204809-DEV-007.md)。
 
+## 20261020-212542-IMAGE-CONFIG
+
+图片能力配置缺失字段修复，起始提交 `314a1c0`，结果 Fixed。原代码新增用例 4 FAIL/1 PASS，修复后 63 项专项及相邻回归通过，前端构建通过。浏览器用原能力模块复现路由异常，再以相同缺失字段响应验证修复后的深色/浅色画布和图片设置；没有付费请求。
+
+原材料包括 `baseline-tests.log`、`regression.log`、`build.log`、`baseline-crash.png`、`fixed-dark.png`、`fixed-light.png`、`browser-results.json`、测试控制器失败 JSON/截图、`image-config-browser.mjs`、源码差异及摘要。截图准备问题与覆盖情况见[修复记录](../reports/FIX-IMAGE-CONFIG_20261020-212542.md)。后续 DEV-008 若复用该运行副本，任务新增以独立证据记录，不覆盖本轮零付费结论。
+
 ## 20261020-202155-DEV-006
 
 DEV-006 稳定对象定位，结果 Fixed（Mac），起始提交 `c86ca713f8e00ed1336e7f2c8b8caaf4f861257d`。真实基线复现发送后重排误改补位行；修复后六场景通过，发送时顺序由已有轮前快照派生，正式 Durable 输入、工具回执及业务数据对应。完全退出后的新进程/新浏览器恢复通过，最终 revision 49；21 次文本模型 dispatch，无媒体任务，测试服务均已停止。

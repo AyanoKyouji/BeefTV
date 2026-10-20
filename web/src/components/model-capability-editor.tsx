@@ -414,7 +414,8 @@ function TextCapabilityEditor({ value, onChange, protocol, disabled, section }: 
 }
 
 function ImageCapabilityEditor({ value, onChange, protocol, model, disabled, section }: Required<Pick<Props, "model" | "disabled">> & Pick<Props, "value" | "onChange" | "protocol" | "section">) {
-    const profile = normalizeModelCapabilityConfig(value || { version: 1, image: defaultImageCapabilityConfig(protocol, model) }).image!;
+    const defaults = defaultImageCapabilityConfig(protocol, model);
+    const profile = normalizeModelCapabilityConfig(value || { version: 1, image: defaults }, defaults).image!;
     const update = (patch: Partial<ImageCapabilityConfig>) => onChange?.({ version: 1, image: { ...profile, ...patch } });
     const updateReferences = (patch: Partial<ImageCapabilityConfig["references"]>) => update({ references: { ...profile.references, ...patch } });
     const updateSize = (patch: Partial<ImageCapabilityConfig["size"]>) => update({ size: { ...profile.size, ...patch } });
