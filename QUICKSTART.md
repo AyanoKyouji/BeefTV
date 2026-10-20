@@ -42,7 +42,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-beeftv-windo
 
 ## 本地开发与验证
 
-需要同时调试前后端时，可参考 `scripts/beeftv-shared-dev.sh`。验证本地发行边界：
+Mac 浏览器日常开发可在仓库根目录执行 `make dev`，或双击 `启动开发.command`。执行 `make stop` 停止；更多命令、环境要求与数据目录见[本机一键启动](docs/demo/development/本机一键启动.md)。需要原生 Wails 窗口联调时，可参考 `scripts/beeftv-shared-dev.sh`。验证本地发行边界：
 
 ```bash
 BEEFTV_GO_DIR=/path/to/go ./scripts/verify-beeftv-local-release.sh
