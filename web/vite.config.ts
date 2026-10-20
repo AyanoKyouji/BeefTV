@@ -10,6 +10,21 @@ const webDir = dirname(fileURLToPath(import.meta.url));
 const appVersion = process.env.CANVAS_BUILD_VERSION?.trim() || readFileSync(resolve(webDir, "../VERSION"), "utf8").trim();
 const apiProxyTarget = process.env.VITE_API_PROXY_TARGET?.trim() || "http://127.0.0.1:8080";
 const desktopLaunchToken = process.env.VITE_DESKTOP_LAUNCH_TOKEN?.trim();
+// Development-only server credential: never use a VITE_ variable, which would
+// expose it to browser modules. Production builds do not configure this path.
+const devOwnerTokenFile = process.env.BEEFTV_DEV_OWNER_TOKEN_FILE?.trim();
+const devOwnerToken = devOwnerTokenFile ? readFileSync(devOwnerTokenFile, "utf8").trim() : "";
+if (devOwnerTokenFile && !devOwnerToken) throw new Error("Local development owner credential is empty");
+const apiProxy = {
+    target: apiProxyTarget,
+    changeOrigin: true,
+    xfwd: true,
+    headers: desktopLaunchToken ? { "X-Desktop-Token": desktopLaunchToken } : {},
+};
+const devOwnerProxy = {
+    ...apiProxy,
+    headers: { ...apiProxy.headers, "X-Beeftv-Owner": devOwnerToken },
+};
 const heavyMediaEnabled = resolveHeavyMediaEnabled(process.env.BEEFTV_FULL_MEDIA_RESOURCES);
 
 function pruneOptionalMediaPlugin() {
@@ -41,12 +56,15 @@ export default defineConfig({
     },
     server: {
         proxy: {
-            "/api": {
-                target: apiProxyTarget,
-                changeOrigin: true,
-                xfwd: true,
-                ...(desktopLaunchToken ? { headers: { "X-Desktop-Token": desktopLaunchToken } } : {}),
-            },
+            // Only authenticated operation/UI entry points need owner identity.
+            // Other browser APIs retain their server-profile contract; marking
+            // model-config as external discovery would redact custom credentials.
+            ...(devOwnerToken ? {
+                "/api/ops": devOwnerProxy,
+                "/api/assistant/ui-session": devOwnerProxy,
+                "/api/agent-clients": devOwnerProxy,
+            } : {}),
+            "/api": apiProxy,
         },
     },
     resolve: {

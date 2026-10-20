@@ -56,7 +56,8 @@ def api_ok(url):
 def ready(state):
     return (owned(state) and state.get("phase") == "running"
             and api_ok(state["backend"] + "/api/health/ready")
-            and api_ok(state["url"] + "/api/workspace/bootstrap"))
+            and api_ok(state["url"] + "/api/workspace/bootstrap")
+            and api_ok(state["url"] + "/api/ops"))
 
 
 def tool(name, candidates):
@@ -105,8 +106,9 @@ def prepare():
                GOMODCACHE=str(ROOT / ".local/cache/go-mod"), BUN_INSTALL_CACHE_DIR=str(ROOT / ".local/cache/bun"),
                CANVAS_BACKEND_DATA_DIR=str(data), CANVAS_BACKEND_ADDR=f"127.0.0.1:{backend_port}",
                CANVAS_DATABASE_DRIVER="sqlite", DATABASE_URL="", CANVAS_AUTO_MIGRATE="true",
+               CANVAS_OFFICIAL_PLUGIN_DIR=str(ROOT / "plugin-packages"),
                CANVAS_SHUTDOWN_TIMEOUT="20s", CANVAS_CORS_ORIGINS=url, BEEFTV_ALLOWED_ORIGINS=url,
-               BEEFTV_UI_BOOTSTRAP="1", VITE_API_PROXY_TARGET=backend, VITE_CANVAS_BACKEND_URL="/api",
+               BEEFTV_UI_BOOTSTRAP="0", VITE_API_PROXY_TARGET=backend, VITE_CANVAS_BACKEND_URL="/api",
                VITE_DESKTOP_LAUNCH_TOKEN="", GIN_MODE="release")
     env["PATH"] = os.pathsep.join([str(Path(bun).parent), str(Path(node).parent), env.get("PATH", "")])
     for directory, marker in [("web", "node_modules/.bin/vite"),
@@ -114,6 +116,8 @@ def prepare():
         if not (ROOT / directory / marker).exists():
             print(f"安装 {directory} 依赖……", flush=True)
             subprocess.run([bun, "install", "--frozen-lockfile"], cwd=ROOT / directory, env=env, check=True)
+    print("准备官方协议插件包……", flush=True)
+    subprocess.run(["sh", str(ROOT / "plugin-packages/build-packages.sh")], cwd=ROOT, env=env, check=True)
     print("编译本地后端（复用 Go 缓存）……", flush=True)
     subprocess.run([go, "build", "-o", str(BACKEND), "./cmd/server"], cwd=ROOT / "backend", env=env, check=True)
     return env, data, url, backend, node, web_port
@@ -138,9 +142,22 @@ def serve():
                     ("web", [os.environ["DEV_NODE"], str(ROOT / "web/node_modules/vite/bin/vite.js"),
                              "--host", "127.0.0.1", "--port", os.environ["DEV_WEB_PORT"], "--strictPort"], ROOT / "web")]
         for name, command, cwd in commands:
+            env = dict(os.environ)
+            if name == "web":
+                owner_file = Path(state["data"]) / "agent_owner_token"
+                deadline = time.monotonic() + 30
+                while not stopping and time.monotonic() < deadline:
+                    if owner_file.is_file() and api_ok(state["backend"] + "/api/health/ready"):
+                        break
+                    if children[0].poll() is not None:
+                        raise RuntimeError("后端提前退出，请查看日志。")
+                    time.sleep(0.2)
+                else:
+                    raise RuntimeError("后端或本机开发凭据未就绪。")
+                env["BEEFTV_DEV_OWNER_TOKEN_FILE"] = str(owner_file)
             with (RUN / f"{name}.log").open("a") as log:
                 children.append(subprocess.Popen(command, cwd=cwd, stdout=log, stderr=subprocess.STDOUT,
-                                                 stdin=subprocess.DEVNULL, start_new_session=True))
+                                                 stdin=subprocess.DEVNULL, start_new_session=True, env=env))
         state["phase"] = "running"
         write_state(state)
         while not stopping:

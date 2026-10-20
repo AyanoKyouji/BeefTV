@@ -2,6 +2,12 @@
 
 原始日志、JSON、截图、测试脚本、数据库和临时令牌没有随本目录发布。原开发机保留原始 `docs/development/evidence/<run-id>/` 档案；Git 中的报告保留结论、命令语义、构建标识与未执行项。引用本页表示证据存在于本地档案，不代表读取本页就完成了原始证据核验。
 
+## 20261020-204809-DEV-007
+
+DEV-007 非 Seedream 图片服务验证，起始提交 `0cbccb9`，结果 Verified（Mac）。中转标识 `flux-3-image` 经官方 `openai-image` 协议单张生成成功，唯一一次上游 POST 返回 HTTP 200；实际图片为 1024×1024 JPEG、402,472 bytes，与请求的尺寸/格式不同。费用及底层别名未核实。另有一个缺少协议包的本地失败任务，上游请求数为零，错误分类问题保留到 DEV-008。
+
+原始文件包括 `model-catalog.json`、`selected-model.json`、`plugin-ready.json`、`submitted-request.json`、`task-identity.json`、`task-states.json`、`task-summary.json`、`result-audit.json`、`initial-document.json`、`image-node.json`、`before-generation.json`、`after-generation.json`、`dev-proxy-auth.json`、`before-cold-restart.json`、`after-restart.json`、`restore-result.json`、`cold-stop.json`、`cold-stop-settled.json`、`cleanup-final.json`、`web-build.log`、源码差异/摘要、浏览器脚本、核对脚本及截图；`preflight-plugin-missing/` 保存初次本地失败记录。图片文件和数据库位于隔离开发数据目录。实际中转地址、API Key、owner 凭据、原始响应均不发布；详见[DEV-007 报告](../reports/DEV-007_20261020-204809-DEV-007.md)。
+
 ## 20261020-202155-DEV-006
 
 DEV-006 稳定对象定位，结果 Fixed（Mac），起始提交 `c86ca713f8e00ed1336e7f2c8b8caaf4f861257d`。真实基线复现发送后重排误改补位行；修复后六场景通过，发送时顺序由已有轮前快照派生，正式 Durable 输入、工具回执及业务数据对应。完全退出后的新进程/新浏览器恢复通过，最终 revision 49；21 次文本模型 dispatch，无媒体任务，测试服务均已停止。
