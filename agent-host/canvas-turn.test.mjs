@@ -204,6 +204,17 @@ describe("供应商定义", () => {
 });
 
 describe("回合上下文", () => {
+    test("分镜顺序使用后端轮前快照，保留同名脚本、行身份和不完整标记", () => {
+        const snapshot = { revision: 7, complete: true, scripts: [
+            { nodeId: 'a', title: '同名', selected: true, rowIds: ['a1', 'a2'] },
+            { nodeId: 'b', title: '同名', selected: false, rowIds: ['b1', 'b2'] },
+        ] };
+        const prefix = turnContextPrefix({ canvasId: 'c1', selectedNodeIds: ['a'], storyboardContext: snapshot });
+        expect(prefix).toContain(JSON.stringify(snapshot));
+        expect(prefix).toContain('rowIds 按当时显示顺序排列');
+        expect(turnContextPrefix({ canvasId: 'c1', storyboardContext: { revision: 8, complete: false, scripts: [] } }))
+            .toContain('"complete":false');
+    });
     test("重置时带上后端签发的 turnId；未给时清空，不沿用上一轮", () => {
         const turn = newTurnAccumulator();
         resetTurnAccumulator(turn, 3, "aabbcc");

@@ -58,6 +58,10 @@ func (s *Service) BeginAssistantTurn(userID, canvasID, turnID string, input Assi
 	return s.assistantTurnsOrInit().Begin(userID, canvasID, turnID, input)
 }
 
+func (s *Service) AssistantStoryboardContext(userID, turnID string) (assistantturns.StoryboardContext, error) {
+	return s.assistantTurnsOrInit().StoryboardContextForHost(userID, turnID)
+}
+
 func (s *Service) AssistantTurnScopeForHost(userID, turnID string) (AssistantTurnScope, bool, error) {
 	return s.assistantTurnsOrInit().ScopeForHost(userID, turnID)
 }

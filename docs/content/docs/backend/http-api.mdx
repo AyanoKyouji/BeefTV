@@ -23,6 +23,8 @@ Wails 和浏览器开发模式共用同一套 `127.0.0.1` HTTP 合同。路由�
 
 `POST /assistant/chat` 的响应头 `X-Beeftv-Turn-Admission` 区分 `rejected`（尚未调用业务轮次入口）、`unknown`（已经尝试开始轮次）与 `admitted`（已创建轮次）。仅明确的 `rejected` 或尚未发送消息的签发失败可按未接纳处理；缺少标记、网络错误或接纳后的断流仍需读取回执与画布确认。凭据续签和 403 失效处理都不会自动重放消息。
 
+后端转发新回合给宿主时，会从该轮已有的持久化快照派生 `storyboardContext: {revision, complete, scripts: [{nodeId, title, selected, rowIds}]}`，覆盖浏览器可能提供的同名字段。`rowIds` 保存接纳时的分镜顺序，用于解析位置引用后追踪稳定身份；它不是写入版本或授权凭据。超出 24 KiB 时返回 `complete=false`、空 `scripts`，不提供可能误导位置解释的部分顺序。具体语义见[分镜行操作](./storyboard-operations)。
+
 ## 核心路由组
 
 生成任务按协议的图片、视频、音频传输声明分别准备素材。自定义渠道可通过 `config.referenceMediaTransport` 覆盖对应类型，取值为 `auto`、`inline`、`url` 或 `link`；托管渠道不接受该覆盖。启用本地参考素材对象存储后，需要 URL 的本机资源在任务执行阶段上传，画布、创作页及其他后端任务入口共用同一流程。`link` 要求调用方提供现成链接，不自动上传。

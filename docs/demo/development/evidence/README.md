@@ -2,6 +2,12 @@
 
 原始日志、JSON、截图、测试脚本、数据库和临时令牌没有随本目录发布。原开发机保留原始 `docs/development/evidence/<run-id>/` 档案；Git 中的报告保留结论、命令语义、构建标识与未执行项。引用本页表示证据存在于本地档案，不代表读取本页就完成了原始证据核验。
 
+## 20261020-202155-DEV-006
+
+DEV-006 稳定对象定位，结果 Fixed（Mac），起始提交 `c86ca713f8e00ed1336e7f2c8b8caaf4f861257d`。真实基线复现发送后重排误改补位行；修复后六场景通过，发送时顺序由已有轮前快照派生，正式 Durable 输入、工具回执及业务数据对应。完全退出后的新进程/新浏览器恢复通过，最终 revision 49；21 次文本模型 dispatch，无媒体任务，测试服务均已停止。
+
+原文件包括 `result.json`、`tool-business-comparison.json`、各场景 initial/reordered/final/history/result/chat-input JSON、流式 NDJSON 与截图、`business-http.ndjson`、`cold-stop.json`、`cold-stop-corrected.json`、`restore-result.json`、`restored-history.json`、`restore-failure.png`、`cleanup-final.json`、Go 专项结构化日志、`checks-summary.json`、`source.patch`、`validated-source-hashes.json`、浏览器与运行/核对脚本。模型凭据、真实中转地址和完整原始日志不发布。失败与修正及验证范围见[任务报告](../reports/DEV-006_20261020-202155-DEV-006.md)。
+
 ## 20261019-233713-DEV-001
 
 DEV-001 基线检查。原文件包括 `baseline.json`、`final-worktree.json`，保存源码与工具采集。开发源码基线为 `2327ee2d80282b10dd8bef0f26b48990d46f5c3b`。

@@ -509,11 +509,16 @@ func RegisterAgentProxyRoutes(r gin.IRouter, svc *app.Service, clients *agentops
 			var trusted map[string]any
 			_ = json.Unmarshal(forwarded, &trusted)
 			trusted["permissionMode"] = input.PermissionMode
-			forwarded, err = json.Marshal(trusted)
+			// Derive positional identities from Begin's persisted snapshot, not
+			// the earlier ownership read or caller-supplied context.
+			trusted["storyboardContext"], err = svc.AssistantStoryboardContext(c.GetString("agentUserId"), turnID)
+			if err == nil {
+				forwarded, err = json.Marshal(trusted)
+			}
 		}
 		if err != nil {
 			settle = true
-			fail(c, http.StatusBadRequest, app.BadAuthRequest("请求体不是合法 JSON"))
+			failService(c, err)
 			return
 		}
 		// 上游请求与浏览器连接解耦：用户中途关页面/点停止不能让已经落地的写入丢掉回合归属。
