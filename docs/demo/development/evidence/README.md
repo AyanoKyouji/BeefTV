@@ -139,3 +139,11 @@ AT007 状态反馈补验，起始 `0a8dfd6`，修复 `f010bbd`，Fixed（Mac Go/
 本机忽略目录 `.local/at007-20261021-164543/` 保存 `runtime.py`、`supplier.mjs`、`browser.mjs`、`replay.png`、`supplier-events.jsonl`、`presentation-tests.log`、`stop-regression.log`、`web-build.log` 及 `final-audit.json`。`states/` 保存 `run.json`、`state.json`、`runtime-state.json`、`baseline-result.json`、`fixed4-result.json`，各阶段带时间的 DOM/动画采样、每阶段三帧截图、回合历史、外网拒绝探针及运行日志。`baseline` 与 `fixed/fixed2/fixed3` 中间尝试、所有 `*-failure-*` 原记录均保留；最终完整序列不是失败材料拼接。
 
 独立数据在 `.local/project-workbench-debug/at007-20261021-164543-states/`；仅配置合成凭证和 localhost 上游，操作系统及浏览器限制外网，日常数据和原 DEV-018/019 数据未改动。`final-audit.json` 记录四个修复文件 SHA-256、本机请求账本/服务计数、三个成功 Task 和 3027/8107/18107 端口关闭结果。数据库、配置、媒体、浏览器资料及原始日志不提交，详细结果与控制器失败说明见[任务报告](../reports/AT007_20261021-164543.md)。
+
+## 20261021-171649-AT004-011
+
+起始 `ca2cf58`，修复 `27e3b6a`。Mac Go/Vite/Chrome，AT004 Fixed、AT011 Verified；AT006 节点选择/表格批量勾选及显式镜头指令边界已核对。复制 DEV-019 冻结数据库与资源到新隔离数据目录，实际 UI 再插入导入图/历史生成图；复现并修复删除线后 `imageNodeId` 残留，再做解除/交替关联、移动与完全重启恢复，全文档及四个图片节点字节一致。75 项前端专项、4 项 Go 上下文测试和构建通过，零新增真实模型、生成 Task 或 Agent dispatch。一次聊天请求在进入后端前拦截，仅用于看选择字段。
+
+忽略目录 `.local/at004-011-20261021-171649/` 保存 `runtime.py`、`browser.mjs`、`audit.py`、`final-audit.json`，`web-tests.log`、四份专项测试日志、`web-build.log`、首次沙箱监听失败 `go-context.jsonl` 及最终 `go-context-final.jsonl`。`assets/` 含 `run.json/state.json/initial.json`、两个 `source-*-asset.json`、`reused-*` 文档/截图、`disconnected.json` 及基线产品失败、`fixed-relinked-original/fixed-unlinked/fixed-rebound-generated/fixed-rebound-import/fixed-final-binding`、`before-restart.json/after-restart.json`、明暗恢复截图、表格第二行选择及 Agent 节点选择截图、`blocked-chat-*` 与结果 JSON。右键落点错误、无模型配置阻止发送等控制器失败原记录均保留。
+
+数据在 `.local/project-workbench-debug/at004-011-20261021-171649-assets/`，未复制原模型配置/密钥/令牌；选择检查只用本机合成文本配置，没有把请求送到模型。`final-audit.json` 记录三个源码摘要、原数据库不变、全文档恢复、两项资源哈希、历史表数量无新增及 3028/8108 端口关闭。原始数据、媒体、凭证和日志不提交；详见[任务报告](../reports/AT004-011_20261021-171649.md)。
