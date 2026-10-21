@@ -98,3 +98,10 @@ DEV-005 发送前提交屏障，结果为 Fixed（Mac），起始基线 `a018bc4
 原材料包括 `run.json`、`result.json`、`baseline-result.json`、`baseline-events.json`、`scenario-results.json`、`verification-start.json`、`verify-events.json`、`T05-final-events.json`、各场景 history/document/stream JSON 与 NDJSON、`row-update-arrived.json`、`business-http.ndjson`、`durable-entries.json`、`durable-tool-results.json`、`final-document.json`、`cleanup-final.json`、`source.patch`、`validated-source-hashes.json`、`web-regression.log`、`assistant-barrier-final.log`、`storage-regression.log`、`storage-regression-2.log`、`typecheck.log`、`web-build-final.log`、`lint.log`、`privacy-check.json`、运行/浏览器日志及截图。`first-candidate/` 和 `stale-test-gate-attempt/` 保留中间结果；`dev005-browser.mjs`、`dev005-audit.py`、`desktop-runtime.go.txt` 保存控制和只读核对方法。
 
 原始凭据及中转地址不发布；没有本轮原生窗口、Windows 或真实图片/视频验收。
+
+
+## 20261021-120800-DEV-012
+
+DEV-012 双入口交付一致性，起始提交 `2d0c81b`，结果 Verified（Mac，受控图片回放 + 真实 DeepSeek 提案）。三个场景（手动有目标 / Agent 有目标 / 手动无目标）在共享交付层产出一致结果，独立 Task / Asset / storageKey，文件 SHA-256 均等于 DEV-009 真实字节；冷启动后完整恢复。图片为本机 `openai-image` 回放（3 次 POST），文本为 1 次真实 DeepSeek dispatch。
+
+本机档案含 `dev012-shared.mjs`、`dev012-manual-target.mjs`、`dev012-agent-target.mjs`、`dev012-manual-standalone.mjs`、`dev012-cold-restart.mjs`，各场景 `initial / running / delivered / final / task / result` JSON 与截图、fixture 请求、`cold-restart-result.json`。数据库、模型凭据、原始日志和媒体文件保留本机，不发布。详见[DEV-012 报告](../reports/DEV-012_20261021-122500-DEV-012.md)。
