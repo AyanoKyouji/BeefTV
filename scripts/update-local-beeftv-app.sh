@@ -13,6 +13,21 @@ cleanup_staged_app() {
 }
 trap cleanup_staged_app EXIT
 
+quit_installed_app() {
+  osascript -e 'tell application id "com.wails.beeftv" to quit' 2>/dev/null || true
+  for _ in 1 2 3 4 5; do
+    pgrep -f '^/Applications/BeefTV.app/Contents/MacOS/BeefTV$' >/dev/null || break
+    sleep 1
+  done
+  if pgrep -f '^/Applications/BeefTV.app/Contents/MacOS/BeefTV$' >/dev/null; then
+    echo "BeefTV is still running. Save your work and quit before updating." >&2
+    exit 1
+  fi
+}
+
+# Wails binding generation starts the desktop composition root too, so the
+# installed process must release the data-directory lock before building.
+quit_installed_app
 "$ROOT_DIR/scripts/build-beeftv-release.sh"
 
 if [[ ! -x "$STAGED_APP/Contents/MacOS/BeefTV" ]]; then
@@ -31,15 +46,7 @@ if [[ -e "$INSTALLED_APP" && ( ! -d "$INSTALLED_APP" || -L "$INSTALLED_APP" ) ]]
   exit 1
 fi
 
-osascript -e 'tell application id "com.wails.beeftv" to quit' 2>/dev/null || true
-for _ in 1 2 3 4 5; do
-  pgrep -f '^/Applications/BeefTV.app/Contents/MacOS/BeefTV$' >/dev/null || break
-  sleep 1
-done
-if pgrep -f '^/Applications/BeefTV.app/Contents/MacOS/BeefTV$' >/dev/null; then
-  echo "BeefTV is still running. Save your work and quit before updating." >&2
-  exit 1
-fi
+quit_installed_app
 
 mkdir -p "$INSTALLED_APP"
 rsync -a --delete "$STAGED_APP/" "$INSTALLED_APP/"
