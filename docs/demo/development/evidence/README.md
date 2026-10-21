@@ -117,3 +117,11 @@ Mac Agent 完整闭环，最终版本 `04522b8`。起始 `e382ac7` 暴露自主�
 本机忽略目录 `.local/dev018-20261021-152916/` 保存 `runtime.py`、`browser.mjs`、`audit.py`、`finish.py`；`result.json`、`final-audit.json`、专项/共享层测试 JSONL、宿主测试日志。`run1/run1b/run1c` 为失败尝试；`run1d/run2d` 为最终连续两轮，分别含 `run.json`、`state.json`、`initial/created/proposed/before-restart/after-restart` JSON、`creation-message/edited-input/model-summary`、真实 stream/history/events、`task.json`、`task-states.json`、`task-submission-*`、`audit-result.json`、`binary-sha256.json`、`restore-result.json`、`offline-egress.json`、`runtime-state.json`、运行日志与创建/提案/交付/离线截图。所有 `*-failure-*` 和控制器失败日志保留。
 
 历史 before/after 全文档深比较为跨进程依据；停止后两份 `collector-*` 是同库只读检查，不能误称历史退出前采集。独立隔离数据在 `.local/project-workbench-debug/dev018-20261021-152916-<run>/`，含正式业务 SQLite、Durable SQLite、请求账本和真实媒体；这些文件及凭证不提交。详细结果和限制见 [DEV-018 报告](../reports/DEV-018_20261021-152916.md)。
+
+## 20261021-161026-DEV-019
+
+Mac 手动闭环，起始 `db4a15a`，空图片设置上传入口修复 `af9282c`，结果 Fixed（Mac Go/Vite/Chrome）。实际 UI 创建脚本/两镜，第一镜导入本地 PNG，第二镜一次真实 Flux 生成；两组全文档/图片/素材离线恢复及继续编辑移动后再恢复通过。0 次文本 dispatch、1 次真实图片 POST；另一个项目有 1 个 INTERNAL 本地准备失败任务，零外部请求。全部失败、接续与边界见 [DEV-019 报告](../reports/DEV-019_20261021-161026.md)。
+
+本机 Git 忽略目录 `.local/dev019-20261021-161026/` 保存 `runtime.py/browser.mjs/finish.py/audit.py`、`import-source.json`、“本地测试素材.png”、`flow-result.json/result.json`、构建/定向测试日志及 Go JSONL。`manual/` 含版本、状态、创建/导入/生成前/退出前/首次恢复/离线编辑/最终恢复 JSON；两素材在线及离线文档、实际任务状态与安全提交摘要、受控失败任务/编辑快照、各阶段结果和截图、禁止外网探针、进程状态/日志、所有 `*-failure-*`。只读审计曾误把 INTERNAL 计为外部请求的原日志也保留。
+
+独立数据位于 `.local/project-workbench-debug/dev019-20261021-161026-manual/`，含业务 SQLite、本地配置及两个真实来源的资源字节；不提交数据库、媒体、凭证、浏览器资料和原日志。首次离线编辑后定位中断，接续仅继续移动/保存/恢复，没有第二次真实生成；不把它记为一次无中断自动运行。
