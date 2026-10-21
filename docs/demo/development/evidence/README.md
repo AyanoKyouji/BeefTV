@@ -147,3 +147,13 @@ AT007 状态反馈补验，起始 `0a8dfd6`，修复 `f010bbd`，Fixed（Mac Go/
 忽略目录 `.local/at004-011-20261021-171649/` 保存 `runtime.py`、`browser.mjs`、`audit.py`、`final-audit.json`，`web-tests.log`、四份专项测试日志、`web-build.log`、首次沙箱监听失败 `go-context.jsonl` 及最终 `go-context-final.jsonl`。`assets/` 含 `run.json/state.json/initial.json`、两个 `source-*-asset.json`、`reused-*` 文档/截图、`disconnected.json` 及基线产品失败、`fixed-relinked-original/fixed-unlinked/fixed-rebound-generated/fixed-rebound-import/fixed-final-binding`、`before-restart.json/after-restart.json`、明暗恢复截图、表格第二行选择及 Agent 节点选择截图、`blocked-chat-*` 与结果 JSON。右键落点错误、无模型配置阻止发送等控制器失败原记录均保留。
 
 数据在 `.local/project-workbench-debug/at004-011-20261021-171649-assets/`，未复制原模型配置/密钥/令牌；选择检查只用本机合成文本配置，没有把请求送到模型。`final-audit.json` 记录三个源码摘要、原数据库不变、全文档恢复、两项资源哈希、历史表数量无新增及 3028/8108 端口关闭。原始数据、媒体、凭证和日志不提交；详见[任务报告](../reports/AT004-011_20261021-171649.md)。
+
+## 20261021-173538-AT010
+
+起始 `cd057af`，修复 `84f918c`。Mac Go/Vite/Chrome，受控模型 400、服务 503、正式异步图片查询无响应 45 秒补验，修复明确参数拒绝误判和已受理查询超时丢失，503 同时显示服务原因和未知结果保护。105 前端、去重 122 主/80 子 Go 及构建通过。受控阶段 5 个创建 POST/2 GET（含修复前），零真实模型；随后按用户追加授权执行 1 次真实 `flux-3-image` POST、0 文本/视频，未用 Seedance/Seedream，新 JPEG 及完整离线重启恢复通过。
+
+忽略目录 `.local/at010-20261021-173538/` 保存 `runtime.py/browser.mjs/supplier.mjs/audit.py`、受控 `final-audit.json`、`supplier-events.jsonl`、Go JSONL 和七个前端测试日志、`web-build.log`。`errors/` 含受控 `state/run/initial/before-restart/after-restart`、三个场景的提交摘要/Task/状态/反馈/运行中/失败/可编辑截图、两份重试拒绝 JSON、明暗恢复截图、`baseline-*` 和所有控制器/产品失败。两次查询实际 45,009/45,002 ms；不把 HTTP 504 模拟成真实等待。
+
+真实补验材料含 `discover.mjs/real-discovery.json/real-browser.mjs/real-audit.py`、`real-final-audit.json`、`real-audit-nontarget-timestamp-diff.json`，以及 `errors/real-state/real-submission/real-task/real-task-states/real-asset/real-before/real-before-restart/real-after-restart`、生成/恢复结果及截图。真实 Task `4b63c7bdecf147c9c57bfa4ac6bec384`，1024×1024 JPEG、535,850 bytes，SHA-256 `ea2d6e8d85a640057251f7ec05da0a6fb24f30cb06ff602368d2574a7e8edc7b`。非目标节点真实生成前后仅 6 个 `updatedAt` 刷新，原严格比较失败及差异记录保留；跨进程全文档比较没有排除字段。
+
+隔离数据在 `.local/project-workbench-debug/at010-20261021-173538-errors/`，原 DEV-019 数据库哈希未变。新真实凭证通过正式 API 加密保存，临时明文输入已删除，不发布地址/密钥/数据库/原日志。受控与真实二进制摘要分别保留，源码摘要对应同一修复；结束时 3030/8110/18110 均关闭。详见[任务报告](../reports/AT010_20261021-173538.md)。
