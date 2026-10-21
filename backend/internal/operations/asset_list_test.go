@@ -51,6 +51,9 @@ func (unusedDomain) RemoveUserCanvasStoryboardRows(string, string, string, []str
 func (unusedDomain) ConnectUserCanvasNodesAtRevision(string, string, string, string, int64) (canvas.UserDataSummary, error) {
 	panic("unused")
 }
+func (unusedDomain) ConnectUserCanvasStoryboardOutputAtRevision(string, string, string, string, string, int64) (canvas.StoryboardOutputConnection, error) {
+	panic("unused")
+}
 func (unusedDomain) CommitUserCanvasDocument(string, string, int64, json.RawMessage) (canvas.UserDataSummary, json.RawMessage, error) {
 	panic("unused")
 }

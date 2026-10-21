@@ -44,8 +44,8 @@ func RegisterDefaultOps(r *Registry) {
 	r.Register(Op{ReplaySafe: true, AssistantCanvas: true, ID: "canvas.nodes.create", Summary: "在画布上批量创建节点（整批校验，带 revision CAS）", Scope: ScopeCanvas,
 		Params:  json.RawMessage(`{"type":"object","properties":{"canvasId":{"type":"string"},"expectedRevision":{"type":"integer"},"nodes":{"type":"array","items":{"type":"object","properties":{"title":{"type":"string"},"type":{"type":"string"},"prompt":{"type":"string"}},"required":["title","type"]}}},"required":["canvasId","nodes","expectedRevision"]}`),
 		Handler: opCanvasNodesCreate})
-	r.Register(Op{ReplaySafe: true, AssistantCanvas: true, ID: "canvas.edge.create", Summary: "连接两个节点（重复连接幂等返回）", Scope: ScopeCanvas,
-		Params:  json.RawMessage(`{"type":"object","properties":{"canvasId":{"type":"string"},"fromNodeId":{"type":"string"},"toNodeId":{"type":"string"},"expectedRevision":{"type":"integer"}},"required":["canvasId","fromNodeId","toNodeId","expectedRevision"]}`),
+	r.Register(Op{ReplaySafe: true, AssistantCanvas: true, ID: "canvas.edge.create", Summary: "连接参考节点；关联分镜图片输出时必须从 script 连到 image 并提供 storyboardRowId，同时登记行归属，无需先生成（重复连接幂等返回）", Scope: ScopeCanvas,
+		Params:  json.RawMessage(`{"type":"object","properties":{"canvasId":{"type":"string"},"fromNodeId":{"type":"string","description":"来源节点；分镜输出时为脚本节点 ID"},"toNodeId":{"type":"string","description":"目标节点；分镜图片输出时为图片节点 ID"},"storyboardRowId":{"type":"string","description":"可选；分镜图片输出必须提供该脚本中真实行 ID，服务端同时建立行关联与输出连线"},"expectedRevision":{"type":"integer"}},"required":["canvasId","fromNodeId","toNodeId","expectedRevision"]}`),
 		Handler: opCanvasEdgeCreate})
 	// 分镜脚本节点的行级写入：行 ID 与镜号由服务端分配，字段白名单见 canvas.StoryboardRowDraft。
 	r.Register(Op{ReplaySafe: true, AssistantCanvas: true, ID: "canvas.script.rows.append", Summary: "向分镜脚本节点批量追加分镜行（行 ID 与镜号由服务端分配，行结构对齐界面默认值）", Scope: ScopeCanvas,
@@ -471,10 +471,11 @@ func opCanvasDocumentCommit(ctx *Context, params json.RawMessage) (any, error) {
 
 func opCanvasEdgeCreate(ctx *Context, params json.RawMessage) (any, error) {
 	var args struct {
-		CanvasID         string `json:"canvasId"`
-		FromNodeID       string `json:"fromNodeId"`
-		ToNodeID         string `json:"toNodeId"`
-		ExpectedRevision int64  `json:"expectedRevision"`
+		CanvasID         string  `json:"canvasId"`
+		FromNodeID       string  `json:"fromNodeId"`
+		ToNodeID         string  `json:"toNodeId"`
+		StoryboardRowID  *string `json:"storyboardRowId"`
+		ExpectedRevision int64   `json:"expectedRevision"`
 	}
 	if err := decodeParams(params, &args); err != nil {
 		return nil, err
@@ -484,6 +485,17 @@ func opCanvasEdgeCreate(ctx *Context, params json.RawMessage) (any, error) {
 	}
 	if args.FromNodeID == args.ToNodeID {
 		return nil, InvalidArg("self_loop", "不能把节点连接到自身")
+	}
+	if args.StoryboardRowID != nil {
+		bound, err := ctx.Domain.ConnectUserCanvasStoryboardOutputAtRevision(ctx.UserID, args.CanvasID, args.FromNodeID, *args.StoryboardRowID, args.ToNodeID, args.ExpectedRevision)
+		if err != nil {
+			return nil, mapDomainError(err)
+		}
+		result := map[string]any{"canvasId": args.CanvasID, "revision": bound.Summary.Revision, "edgeId": bound.EdgeID, "created": bound.Created, "duplicate": !bound.Created, "storyboardRowId": *args.StoryboardRowID, "imageNodeId": args.ToNodeID}
+		if bound.RowUpdated {
+			result["nodeId"] = args.FromNodeID
+		}
+		return result, nil
 	}
 	summary, err := ctx.Domain.ConnectUserCanvasNodesAtRevision(ctx.UserID, args.CanvasID, args.FromNodeID, args.ToNodeID, args.ExpectedRevision)
 	if err != nil {

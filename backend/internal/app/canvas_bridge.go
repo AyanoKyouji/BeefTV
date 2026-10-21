@@ -497,6 +497,10 @@ func (s *operationSession) ConnectUserCanvasNodesAtRevision(userID string, canva
 	return s.canvas.ConnectUserCanvasNodesAtRevision(userID, canvasID, fromNodeID, toNodeID, expectedRevision)
 }
 
+func (s *operationSession) ConnectUserCanvasStoryboardOutputAtRevision(userID, canvasID, scriptID, rowID, imageID string, expectedRevision int64) (canvas.StoryboardOutputConnection, error) {
+	return s.canvas.ConnectUserCanvasStoryboardOutputAtRevision(userID, canvasID, scriptID, rowID, imageID, expectedRevision)
+}
+
 func (s *operationSession) AppendUserCanvasStoryboardRows(userID string, canvasID string, nodeID string, drafts []canvas.StoryboardRowDraft, expectedRevision int64) (canvas.UserDataSummary, []canvas.StoryboardRowIdentity, error) {
 	return s.canvas.AppendUserCanvasStoryboardRows(userID, canvasID, nodeID, drafts, expectedRevision)
 }
