@@ -3,12 +3,15 @@ import { resourceIdFromStorageKey } from "@/services/api/resources";
 
 /**
  * Resource storage policy for the two local runtimes:
- * - native desktop: Go resource service is the durable local store;
+ * - native desktop / explicit Vite+Go development: Go is the durable local store;
  * - browser local: IndexedDB is the durable local store.
  * Hosted mode always attempts the remote resource API first.
  */
 export function usesBrowserLocalResourceStore() {
-    return isLocalRuntimeMode() && !isNativeDesktopRuntime();
+    // The launcher owns a Go workspace behind /api; a relative URL alone
+    // cannot distinguish it from a browser-only workspace.
+    const devLocalBackend = import.meta.env.DEV && import.meta.env.VITE_BEEFTV_DEV_LOCAL_BACKEND === "true";
+    return isLocalRuntimeMode() && !isNativeDesktopRuntime() && !devLocalBackend;
 }
 
 export function usesNativeLocalResourceStore() {

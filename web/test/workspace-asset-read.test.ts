@@ -206,6 +206,34 @@ afterEach(async () => {
 });
 
 describe("workspace asset canonical reads", () => {
+    test.each([
+        { label: "launcher Vite+Go", dev: "true", backend: "true", readsGo: true },
+        { label: "standalone browser", dev: "true", backend: undefined, readsGo: false },
+        { label: "production ignores development flag", dev: undefined, backend: "true", readsGo: false },
+    ])("$label preserves the correct library after the browser cache is empty", async ({ dev, backend, readsGo }) => {
+        const restore = switchScope("dev-library-owner");
+        browserLocal();
+        const previousDev = process.env.DEV;
+        const previousBackend = process.env.VITE_BEEFTV_DEV_LOCAL_BACKEND;
+        const urls: string[] = [];
+        try {
+            if (dev === undefined) delete process.env.DEV; else process.env.DEV = dev;
+            if (backend === undefined) delete process.env.VITE_BEEFTV_DEV_LOCAL_BACKEND; else process.env.VITE_BEEFTV_DEV_LOCAL_BACKEND = backend;
+            expect(useAssetStore.getState().assets).toEqual([]);
+            const page = await withAdapter(async (config) => {
+                urls.push(requestKey(config));
+                if (!isAssetCollection(String(config.url || ""))) throw new Error("unexpected library request");
+                return envelope(pageResponse([sampleClientAsset("persisted-image")]));
+            }, () => loadWorkspaceAssetLibraryPage({ page: 1, pageSize: 40 }));
+            expect(page.assets.map((asset) => asset.id)).toEqual(readsGo ? ["persisted-image"] : []);
+            expect(urls).toEqual(readsGo ? ["get /assets"] : []);
+        } finally {
+            if (previousDev === undefined) delete process.env.DEV; else process.env.DEV = previousDev;
+            if (previousBackend === undefined) delete process.env.VITE_BEEFTV_DEV_LOCAL_BACKEND; else process.env.VITE_BEEFTV_DEV_LOCAL_BACKEND = previousBackend;
+            restore();
+        }
+    });
+
     test("desktop empty cache still lists and selects a SQLite asset", async () => {
         const restore = switchScope("owner-a");
         desktopBackend();

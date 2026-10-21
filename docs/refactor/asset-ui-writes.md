@@ -23,9 +23,10 @@
 | --- | --- | --- | --- |
 | 浏览器纯本地（无 Go 资源库） | `usesBrowserLocalResourceStore()` | IndexedDB 仍是产品持久路径；`projectIds` 写在本地 metadata | IndexedDB `infinite-canvas:asset-folders` |
 | 桌面有后端 | `isNativeDesktopRuntime()` 且本地运行时 | `PUT /assets/:id`、`POST /projects/:id/assets`、分类/文件夹 PATCH、`DELETE /assets/:id` | `/asset-folders` 与 `PATCH /assets/folder` |
+| Vite+Go 开发入口 | `make dev` 设置 `VITE_BEEFTV_DEV_LOCAL_BACKEND=true`，且 `import.meta.env.DEV` | 同上 typed API，SQLite 为已提交事实 | 同上 |
 | hosted | 非浏览器本地资源库 | 同上 typed API；禁止 `saveRemoteUserDataNow` 整批覆盖 | 同上 |
 
-`isLocalWorkspaceMode()` 仍表示本地优先产品面（路由把项目详情送到画布）。桌面也是 local workspace，不能再用它跳过项目链接、分类 API 或素材库读取。Vite+Go 与纯浏览器共用 `usesBrowserLocalResourceStore()`，分类与纯浏览器素材库仍走 IDB。
+`isLocalWorkspaceMode()` 仍表示本地优先产品面（路由把项目详情送到画布）。桌面也是 local workspace，不能再用它跳过项目链接、分类 API 或素材库读取。Vite+Go 开发入口显式选择既有 Go 资源库；单独运行 Vite 未设置该标记时，分类与纯浏览器素材库仍走 IDB。该标记在生产构建中不生效，也不改变 Wails 的运行时判定。
 
 ## 读取
 

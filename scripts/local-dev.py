@@ -109,6 +109,7 @@ def prepare():
                CANVAS_OFFICIAL_PLUGIN_DIR=str(ROOT / "plugin-packages"),
                CANVAS_SHUTDOWN_TIMEOUT="20s", CANVAS_CORS_ORIGINS=url, BEEFTV_ALLOWED_ORIGINS=url,
                BEEFTV_UI_BOOTSTRAP="0", VITE_API_PROXY_TARGET=backend, VITE_CANVAS_BACKEND_URL="/api",
+               VITE_BEEFTV_DEV_LOCAL_BACKEND="true",
                VITE_DESKTOP_LAUNCH_TOKEN="", GIN_MODE="release")
     env["PATH"] = os.pathsep.join([str(Path(bun).parent), str(Path(node).parent), env.get("PATH", "")])
     for directory, marker in [("web", "node_modules/.bin/vite"),
