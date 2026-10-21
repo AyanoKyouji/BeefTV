@@ -157,3 +157,13 @@ AT007 状态反馈补验，起始 `0a8dfd6`，修复 `f010bbd`，Fixed（Mac Go/
 真实补验材料含 `discover.mjs/real-discovery.json/real-browser.mjs/real-audit.py`、`real-final-audit.json`、`real-audit-nontarget-timestamp-diff.json`，以及 `errors/real-state/real-submission/real-task/real-task-states/real-asset/real-before/real-before-restart/real-after-restart`、生成/恢复结果及截图。真实 Task `4b63c7bdecf147c9c57bfa4ac6bec384`，1024×1024 JPEG、535,850 bytes，SHA-256 `ea2d6e8d85a640057251f7ec05da0a6fb24f30cb06ff602368d2574a7e8edc7b`。非目标节点真实生成前后仅 6 个 `updatedAt` 刷新，原严格比较失败及差异记录保留；跨进程全文档比较没有排除字段。
 
 隔离数据在 `.local/project-workbench-debug/at010-20261021-173538-errors/`，原 DEV-019 数据库哈希未变。新真实凭证通过正式 API 加密保存，临时明文输入已删除，不发布地址/密钥/数据库/原日志。受控与真实二进制摘要分别保留，源码摘要对应同一修复；结束时 3030/8110/18110 均关闭。详见[任务报告](../reports/AT010_20261021-173538.md)。
+
+## 20261021-180942-DEMO-MATERIALS
+
+起始 `d69e2f2`，产品基线 `84f918c`。演示材料整理，零新文本/图片/视频调用，未启动 BeefTV 或重跑业务验收。忽略目录 `.local/demo-materials-20261021-180942/` 内保存 `prepare.py/verify.mjs`、`source-check.json/browser-check.json/final-check.json`、桌面/窄屏 `preview-1440.png/preview-390.png`、`presentation/` 与 `presentation.zip`。
+
+静态包内 11 文件：HTML、说明、manifest 与 8 项媒体（DEV-018 两张真实图、DEV-019 真实图/导入色卡、AT010 真实图及三张历史界面截图），版本及受控/真实来源逐项标注。双视口 8 图全部解码、无水平溢出或脚本错误，HTTP 请求 0。压缩包 3,273,653 bytes，SHA-256 `7ccfc44130978bc161d16ce80321bda07f22ea591aa7d19c694b290b6e44deb1`，CRC/路径/媒体哈希通过；包内没有数据库、模型配置、日志或凭证。
+
+私有数据副本位于 `.local/project-workbench-debug/demo-materials-20261021-180942-{agent,manual}`，只含 SQLite 与资源，完整性及资源哈希通过；没有启动排练，也没有复制会话/模型配置/密钥/令牌。选用来源数据库与原媒体哈希不变。首次准备脚本因未关闭备份连接而对临时 WAL/SHM 断言失败，原输出保存在 `attempt1-presentation/` 和 `…-agent-attempt1`；关闭连接后重新准备成功，未影响原业务数据。
+
+媒体/包/业务副本不提交，Git 仅保留文字指南、报告及索引。详见[材料报告](../reports/DEMO-MATERIALS_20261021-180942.md)与[演示操作指南](../演示操作指南.md)。

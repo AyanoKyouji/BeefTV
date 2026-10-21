@@ -4,7 +4,7 @@
 
 ## 当前进度
 
-最新结果：[AT010 异常补验及真实 Flux 验证](development/reports/AT010_20261021-173538.md)完成，修复明确参数拒绝误判、已受理查询超时状态丢失，并补 503 原因说明；一次真实 Flux 生成及离线恢复通过。此前 AT007、AT004/011 与 AT006 选择口径补验已完成。Mac 功能证据现为 11 项已覆盖、1 项 Windows 专属；历史/最新版本、受控/真实结果分别记录，这不是最终通过率。下一项演示流程与成果整理，顺序见[第六阶段验收核对](development/reports/STAGE-6_Acceptance-Audit_20261021.md)。Windows 最终构建/平台检查集中到交付前，见[跨平台约定](development/开发与跨平台验证约定.md)。
+最新结果：[演示流程与成果整理](development/reports/DEMO-MATERIALS_20261021-180942.md)完成，已备 6～8 分钟[操作指南](development/演示操作指南.md)、本机离线成果页/静态分享包及独立业务副本；本轮零模型调用，未重新执行业务验收。此前 [AT010 异常补验及真实 Flux 验证](development/reports/AT010_20261021-173538.md)、AT007、AT004/011 与 AT006 选择口径补验完成。Mac 功能证据仍为 11 项已覆盖、1 项 Windows 专属；历史/最新版本、受控/真实结果分别记录，这不是最终通过率。下一项冻结最新 Windows 构建并准备最终集中平台验收，顺序见[第六阶段验收核对](development/reports/STAGE-6_Acceptance-Audit_20261021.md)及[跨平台约定](development/开发与跨平台验证约定.md)。
 
 2026-10-21 独立复测补注：DEV-012～017 已按本地代码重新检查。DEV-015/016 的进程恢复补测发现提交未知状态丢失，已修复并在 Mac 实测；快照采集器漏检已修复为全文档摘要对照。**旧 DEV-017 Windows 产物不包含本次后端修复，修复版待重新构建及受影响回归**。以下逐项文字保留原执行结果，最新边界以[复测报告](development/reports/DEV-012-017_Retest_20261021-144414.md)为准；无新增远程模型调用。
 
@@ -49,6 +49,7 @@
 | 资源与验收 | [T503](T503_资源条件与执行节奏_讨论稿_V0.1.md)、[T504](T504_验收与证据计划_讨论稿_V0.1.md) |
 | 执行材料与收口 | [T505](T505_首批任务执行材料_讨论稿_V0.1.md)、[T506](T506_执行计划审查与阶段收口_讨论稿_V0.1.md) |
 | 运行平台与回归 | [开发与跨平台验证约定](development/开发与跨平台验证约定.md) |
+| 演示与成果 | [演示操作指南](development/演示操作指南.md)、[材料整理记录](development/reports/DEMO-MATERIALS_20261021-180942.md) |
 | Git 工作方式 | [分支与同步约定](git-workflow.md) |
 | 本地证据与交接包 | [证据索引](development/evidence/README.md)、[历史交接归档](development/handoff/README.md) |
 
