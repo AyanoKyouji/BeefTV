@@ -2,6 +2,12 @@
 
 原始日志、JSON、截图、测试脚本、数据库和临时令牌没有随本目录发布。原开发机保留原始 `docs/development/evidence/<run-id>/` 档案；Git 中的报告保留结论、命令语义、构建标识与未执行项。引用本页表示证据存在于本地档案，不代表读取本页就完成了原始证据核验。
 
+## 20261021-100551-DEV-009
+
+DEV-009 Agent 提案与确认验证，源码提交 `de0121b44386be05d593afdbcae9ee8a827f634b`，结果 Verified（Mac），无需产品源码修改。两次 UI 编辑后真实工具读取、节点草稿和正式提案对应；拒绝零图片任务，确认后一次真实 Flux 请求的 prompt 与第二次编辑逐字一致，图片归于提案节点。10 次文本 dispatch、1 次图片生成；冷启动后完整节点/连线、分镜、历史及文件哈希一致。Go 18 主测试/3 子测试、前端 55 项通过。
+
+原文件包括 `run.json`、reject/confirm 的 fixture、before、history、chat-input、proposed、result JSON 与 stream NDJSON、`reject-proposal.png`、`confirm-proposal.png`、`rejected.png`、`confirmed.png`、`accepted-task.json`、`confirm-submitted.json`、`task.json`、`task-states.json`、`final.json`、`tool-input-comparison.json`、`audit.json`、`before-restart.json`、`after-restart.json`、`checkpoint.json`、`restore-result.json`、`cold-stop.json`、`cleanup-final.json`、`go-tests.jsonl`、`web-tests.log`、控制/核对脚本及失败截图。原始模型/媒体记录和凭据保留本机，不发布；详细边界及控制器修正见[DEV-009 报告](../reports/DEV-009_20261021-100551-DEV-009.md)。
+
 ## 20261020-204809-DEV-007
 
 DEV-007 非 Seedream 图片服务验证，起始提交 `0cbccb9`，结果 Verified（Mac）。中转标识 `flux-3-image` 经官方 `openai-image` 协议单张生成成功，唯一一次上游 POST 返回 HTTP 200；实际图片为 1024×1024 JPEG、402,472 bytes，与请求的尺寸/格式不同。费用及底层别名未核实。另有一个缺少协议包的本地失败任务，上游请求数为零，错误分类问题保留到 DEV-008。
