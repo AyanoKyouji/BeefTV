@@ -1,6 +1,6 @@
-# 历史 Windows 交接归档
+# Windows 交接入口与历史归档
 
-当前使用 Git fork 的 `demo/ai-media` 分支管理源码，见[分支约定](../../git-workflow.md)。本页仅索引早期交接材料。
+当前使用 Git fork 的 `demo/ai-media` 分支管理源码，见[分支约定](../../git-workflow.md)。**最新交接使用 [WINDOWS-FINAL 独立执行说明](WINDOWS-FINAL/README.md)**，包含当前本地快照、构建/隔离启动工具、同构建最终验收与回传模板；[准备报告](../reports/WINDOWS-FINAL-PREP_20261021.md)说明实际检查范围。Windows 原生结果待回传。以下均为历史，不能将旧包当作当前最终版本。
 
 本地保留 `DEV-003-Windows-source-20261020-112554-DEV-003-v3.zip`（约 72.6 MiB），SHA-256：`e067c71f476fdd0f601e3c2db5674510fdc934c398d9f1aee6fceb270c6a0255`。它包含当时基线的 3565 个源码文件、DEV-002 四文件补丁、逐文件 manifest 以及 Windows 接续工具。该 zip、旧版本包、工具脚本及生成的 manifest 在本机历史档案保留，不加入本 Git 分支。
 
@@ -10,7 +10,7 @@
 
 ## DEV-018/019
 
-2026-10-21 准备的 Windows E2E 完整业务闭环（DEV-018 Agent 路径连续两次 + DEV-019 手动路径）交接材料。在 DEV-017 通过的最终构建（`f84d5a1` / exe SHA `ffc8a465…3e9f4a`）上执行。说明见 [DEV-018-019/README.md](DEV-018-019/README.md)。修正版快照采集器已入库 [docs/demo/development/tools/Inspect-Saved-Project.mjs](../../tools/Inspect-Saved-Project.mjs)。
+2026-10-21 早期准备的 Windows E2E 完整业务闭环（DEV-018 Agent 路径连续两次 + DEV-019 手动路径）交接材料，原先计划在 DEV-017 的旧构建（`f84d5a1` / exe SHA `ffc8a465…3e9f4a`）执行，后来改为 Mac 优先，最新最终 Windows 需新构建。旧说明见 [DEV-018-019/README.md](DEV-018-019/README.md)。修正版快照采集器已入库 [Inspect-Saved-Project.mjs](../tools/Inspect-Saved-Project.mjs)。
 
 ## DEV-017
 

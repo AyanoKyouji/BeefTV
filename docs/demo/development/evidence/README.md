@@ -167,3 +167,9 @@ AT007 状态反馈补验，起始 `0a8dfd6`，修复 `f010bbd`，Fixed（Mac Go/
 私有数据副本位于 `.local/project-workbench-debug/demo-materials-20261021-180942-{agent,manual}`，只含 SQLite 与资源，完整性及资源哈希通过；没有启动排练，也没有复制会话/模型配置/密钥/令牌。选用来源数据库与原媒体哈希不变。首次准备脚本因未关闭备份连接而对临时 WAL/SHM 断言失败，原输出保存在 `attempt1-presentation/` 和 `…-agent-attempt1`；关闭连接后重新准备成功，未影响原业务数据。
 
 媒体/包/业务副本不提交，Git 仅保留文字指南、报告及索引。详见[材料报告](../reports/DEMO-MATERIALS_20261021-180942.md)与[演示操作指南](../演示操作指南.md)。
+
+## 20261021-WINDOWS-FINAL-PREP
+
+起始 `2382cee`，产品代码最近修复基线 `84f918c`。Windows 原生构建交接准备：公开说明和脚本位于 `handoff/WINDOWS-FINAL/`，本机忽略目录 `.local/windows-final-prep-20261021/` 保存 `tool-tests.log`（新增工具 14 + 现有采集器 12，共 26 PASS）、完整源码 `BeefTV-Windows-Final-source.zip`、独立 `START-HERE.md`、`source-manifest.json`、`source-check.json`、`archive-check.json`、`package-summary.json` 及源包摘要。快照精确提交、成员数量/总字节/摘要以这些清单为准；从 Git 提交导出，不包括工作区未提交内容或 `.local`。
+
+源码/完整载荷验证器专项及 schemaVersion 2 全文档采集器在 Mac Node 24.15.0 检查通过；实际源快照逐文件哈希及 zip 路径/成员/CRC 核对。没有 PowerShell 原生解析/执行、Windows 编译/窗口或模型调用；Windows 侧先解析辅助脚本，再按阶段执行并回传。原业务数据、模型配置、缓存、私有日志和媒体成果未进入源码包。详见[准备报告](../reports/WINDOWS-FINAL-PREP_20261021.md)与[可直接交给 Windows 模型的说明](../handoff/WINDOWS-FINAL/README.md)。
