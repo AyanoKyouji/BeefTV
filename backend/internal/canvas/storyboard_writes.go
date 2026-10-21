@@ -112,7 +112,11 @@ func (s *Service) UpdateUserCanvasStoryboardRows(userID, canvasID, nodeID string
 			return UserDataSummary{}, nil, kernel.NewAppError(http.StatusBadRequest, "同一批次内行重复: "+patch.RowID)
 		}
 		seen[patch.RowID] = true
+		previous := cloneNode(row)
 		applyStoryboardRowDraft(row, patch.StoryboardRowDraft)
+		if output := invalidateStoryboardImageBinding(previous, row); output != "" {
+			removeStoryboardImageOutputConnection(doc, nodeID, patch.RowID, output)
+		}
 		updated = append(updated, StoryboardRowIdentity{ID: patch.RowID, ShotNumber: rowShotNumber(row)})
 	}
 	summary, err := s.saveStoryboardRows(userID, canvasID, doc, storyboard, rows, expectedRevision)

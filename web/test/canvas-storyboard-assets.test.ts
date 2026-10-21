@@ -1,7 +1,7 @@
 import { describe, expect, it } from "bun:test";
 
 import { buildStoryboardAssetCatalog } from "@/lib/canvas/canvas-storyboard-assets";
-import { reconcileStoryboardTargetConnections, storyboardComposerContent, storyboardRowReferenceNodeIds } from "@/lib/canvas/canvas-storyboard-materializer";
+import { reconcileStoryboardRowOutputs, reconcileStoryboardTargetConnections, storyboardComposerContent, storyboardRowReferenceNodeIds } from "@/lib/canvas/canvas-storyboard-materializer";
 import { CanvasNodeType, type CanvasConnection, type CanvasNodeData, type StoryboardRow } from "@/types/canvas";
 
 const node = (id: string, type: CanvasNodeType, metadata: CanvasNodeData["metadata"] = {}): CanvasNodeData => ({
@@ -59,6 +59,55 @@ describe("storyboard asset catalog", () => {
             ["audio", "audio"],
             ["character", "character"],
         ]);
+    });
+});
+
+describe("storyboard image ownership after source edits", () => {
+    const bound = { ...row, imageGenerationPrompt: "blue car", imageNodeId: "output" };
+    const output: CanvasConnection = { id: "output-edge", fromNodeId: "script", toNodeId: "output", fromHandleId: "row:row-1", storyboardRowId: "row-1", relation: "storyboard-output" };
+    const reference: CanvasConnection = { id: "reference", fromNodeId: "prop", toNodeId: "script", toHandleId: "row:row-1" };
+    const otherBoard: CanvasConnection = { ...output, id: "other-board", fromNodeId: "other-script" };
+
+    it("retains a stable row's output when its display number and order change", () => {
+        const other = { ...row, id: "other-row", imageNodeId: undefined };
+        const result = reconcileStoryboardRowOutputs("script", [other, bound], [{ ...bound, shotNumber: 1 }, { ...other, shotNumber: 2 }], [output]);
+        expect(result.rows[0].imageNodeId).toBe("output");
+        expect(result.connections).toEqual([output]);
+        expect(result.detachedCount).toBe(0);
+    });
+
+    it("detaches only the old image output, preserving incoming references and other boards", () => {
+        const result = reconcileStoryboardRowOutputs("script", [bound], [{ ...bound, imageGenerationPrompt: "red car" }], [output, reference, otherBoard]);
+        expect(result.rows[0].imageNodeId).toBeUndefined();
+        expect(result.rows[0].imageBindingStale).toBe(true);
+        expect(result.rows[0].imageGenerationPrompt).toBe("red car");
+        expect(result.rows[0].assetBindings).toEqual(bound.assetBindings);
+        expect(result.connections).toEqual([reference, otherBoard]);
+        expect(result.detachedCount).toBe(1);
+    });
+
+    it("keeps the image when editing dialogue or a plot hidden by an explicit image prompt", () => {
+        const result = reconcileStoryboardRowOutputs("script", [bound], [{ ...bound, dialogue: "changed", plotDescription: "changed plot" }], [output]);
+        expect(result.rows[0].imageNodeId).toBe("output");
+        expect(result.detachedCount).toBe(0);
+    });
+
+    it("invalidates the image when its fallback plot input changes", () => {
+        const fallback = { ...bound, imageGenerationPrompt: "", plotDescription: "old plot" };
+        const result = reconcileStoryboardRowOutputs("script", [fallback], [{ ...fallback, plotDescription: "new plot" }], [output]);
+        expect(result.rows[0].imageNodeId).toBeUndefined();
+        expect(result.connections).toEqual([]);
+    });
+
+    it("does not discard an explicitly replaced image or a whitespace-only edit", () => {
+        expect(reconcileStoryboardRowOutputs("script", [bound], [{ ...bound, imageGenerationPrompt: "red car", imageNodeId: "replacement" }], []).rows[0].imageNodeId).toBe("replacement");
+        expect(reconcileStoryboardRowOutputs("script", [bound], [{ ...bound, imageGenerationPrompt: " blue car " }], [output]).rows[0].imageNodeId).toBe("output");
+    });
+
+    it("removes deleted row connections without affecting an identical row ID on another board", () => {
+        const result = reconcileStoryboardRowOutputs("script", [bound], [], [output, reference, otherBoard]);
+        expect(result.connections).toEqual([otherBoard]);
+        expect(result.rows).toEqual([]);
     });
 });
 

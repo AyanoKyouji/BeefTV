@@ -4,6 +4,32 @@ import { storyboardAssetRoleForNode } from "@/lib/canvas/canvas-storyboard-asset
 import { buildOrderedCanvasResourceReferences, canvasResourceMentionToken } from "@/lib/canvas/canvas-resource-references";
 import { CanvasNodeType, type CanvasConnection, type CanvasNodeData, type StoryboardAssetBinding, type StoryboardRow } from "@/types/canvas";
 
+export function reconcileStoryboardRowOutputs(scriptId: string, previous: StoryboardRow[], rows: StoryboardRow[], connections: CanvasConnection[]) {
+    const before = new Map(previous.map((row) => [row.id, row]));
+    const remaining = new Set(rows.map((row) => row.id));
+    const removed = new Set(previous.filter((row) => !remaining.has(row.id)).map((row) => row.id));
+    const detached = new Map<string, string>();
+    const imagePrompt = (row: StoryboardRow) => (row.imageGenerationPrompt || row.plotDescription).trim();
+    const nextRows = rows.map((row) => {
+        const old = before.get(row.id);
+        if (!old?.imageNodeId || row.imageNodeId !== old.imageNodeId || imagePrompt(old) === imagePrompt(row)) return row;
+        detached.set(row.id, old.imageNodeId);
+        // Keep the task and media node. An old input's output must no longer
+        // count as the edited row's current image, even if it completes later.
+        return { ...row, imageNodeId: undefined, imageBindingStale: true };
+    });
+    const nextConnections = connections.filter((edge) => {
+        const from = edge.fromNodeId === scriptId, to = edge.toNodeId === scriptId;
+        if ((from || to) && edge.storyboardRowId && removed.has(edge.storyboardRowId)) return false;
+        if (from && edge.fromHandleId?.startsWith("row:") && removed.has(edge.fromHandleId.slice(4))) return false;
+        if (to && edge.toHandleId?.startsWith("row:") && removed.has(edge.toHandleId.slice(4))) return false;
+        if (!from) return true;
+        const rowId = edge.fromHandleId?.startsWith("row:") ? edge.fromHandleId.slice(4) : edge.storyboardRowId;
+        return !rowId || detached.get(rowId) !== edge.toNodeId;
+    });
+    return { rows: nextRows, connections: nextConnections, detachedCount: detached.size };
+}
+
 export function storyboardRowReferenceNodeIds(
     scriptNode: CanvasNodeData,
     row: StoryboardRow,

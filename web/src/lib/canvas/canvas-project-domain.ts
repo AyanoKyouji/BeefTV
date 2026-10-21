@@ -280,7 +280,7 @@ export function attachNodeToStoryboardRow(nodes: CanvasNodeData[], connection: P
                 ...node.metadata,
                 storyboard: {
                     rows: (storyboard?.rows || []).map((item) => item.id !== rowId ? item : scriptNodeId === connection.fromNodeId
-                        ? { ...item, imageNodeId: linkedNode.type === CanvasNodeType.Image ? linkedNode.id : item.imageNodeId, videoNodeId: linkedNode.type === CanvasNodeType.Video ? linkedNode.id : item.videoNodeId }
+                        ? { ...item, imageNodeId: linkedNode.type === CanvasNodeType.Image ? linkedNode.id : item.imageNodeId, imageBindingStale: linkedNode.type === CanvasNodeType.Image ? undefined : item.imageBindingStale, videoNodeId: linkedNode.type === CanvasNodeType.Video ? linkedNode.id : item.videoNodeId }
                         : binding && !(item.assetBindings || []).some((candidate) => candidate.nodeId === linkedNode.id)
                           ? { ...item, assetBindings: [...(item.assetBindings || []), binding] }
                           : item),

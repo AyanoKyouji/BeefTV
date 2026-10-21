@@ -2,6 +2,12 @@
 
 原始日志、JSON、截图、测试脚本、数据库和临时令牌没有随本目录发布。原开发机保留原始 `docs/development/evidence/<run-id>/` 档案；Git 中的报告保留结论、命令语义、构建标识与未执行项。引用本页表示证据存在于本地档案，不代表读取本页就完成了原始证据核验。
 
+## 20261021-104440-DEV-011
+
+DEV-011 目标分镜绑定，起始提交 `d224faf`，结果 Fixed（Mac，受控回放）。真实图片字节经本地等待/释放端点进入正式 Task 与交付链；重排、删除、UI / 正式行操作改输入四场景及冷启动恢复通过。修复过期图片关联，保留原产物并持久显示行内提示；回执、重放及整轮撤销专项通过。前端 41 项、Go 69 主测试/49 子测试、生产构建及明暗主题通过；没有远程模型调用，不作为新真实模型生成或 Agent 自主关联证据。
+
+本机档案含 `run.json`、各场景的 initial、submitted、identity、fixture-request、running、changed-while-running、task、states、final、result JSON，原版复现及失败截图、正式行编辑回执、持久提示明暗截图、`checkpoint-result.json`、`restore-result.json`、`cold-stop.json`、`cleanup-final.json`、`storage-audit.json`、测试/构建日志、源码哈希与差异、浏览器/恢复/核对控制器。8 次本地回放含 1 次控制器中止失败，失败档案保留；日志及媒体不发布。详见[DEV-011 报告](../reports/DEV-011_20261021-104440-DEV-011.md)。
+
 ## 20261021-102534-DEV-010
 
 DEV-010 本地资源与离线恢复，起始提交 `ad4978f57ba755e3f9de6e59977f5d7a9f802a09`，结果 Fixed（Mac）。修复开发入口素材库误读浏览器私有存储，现有项目节点→Asset→Resource→真实文件一致；全新浏览器及仅允许 localhost 的进程环境冷启动后，完整节点/连线、素材登记与三处图片哈希一致。Go 6 主测试/42 子测试、前端 75 项及生产构建通过，新增文本/图片调用为零。

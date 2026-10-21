@@ -21,7 +21,7 @@ import {
 import { buildNodeMentionReferences } from "@/lib/canvas/canvas-resource-references";
 import { buildStoryboardAssetCatalog } from "@/lib/canvas/canvas-storyboard-assets";
 import { resolveStoryboardGenerationContext } from "@/lib/canvas/canvas-storyboard-context";
-import { reconcileStoryboardTargetConnections, storyboardComposerContent, storyboardRowReferenceNodeIds } from "@/lib/canvas/canvas-storyboard-materializer";
+import { reconcileStoryboardRowOutputs, reconcileStoryboardTargetConnections, storyboardComposerContent, storyboardRowReferenceNodeIds } from "@/lib/canvas/canvas-storyboard-materializer";
 import { generationErrorMessage } from "@/lib/generation-error";
 import { navigateToSettings } from "@/lib/settings-navigation";
 import type { Skill } from "@/services/api/skills";
@@ -93,30 +93,30 @@ export function useCanvasStoryboard({
     }), [effectiveConfig, modal]);
 
     const updateScriptRows = useCallback((nodeId: string, updater: (rows: StoryboardRow[]) => StoryboardRow[]) => {
+        const source = nodesRef.current.find((node) => node.id === nodeId);
+        if (!source) return;
+        const previousRows = source.metadata?.storyboard?.rows || [];
+        const previousById = new Map(previousRows.map((row) => [row.id, row]));
+        const nextRows = updater(previousRows).map((row) => invalidateEditedPromptVariables(previousById.get(row.id), row));
+        const result = reconcileStoryboardRowOutputs(nodeId, previousRows, nextRows, connectionsRef.current);
+        connectionsRef.current = result.connections;
+        setConnections(result.connections);
         setNodes((current) => current.map((node) => node.id === nodeId ? {
             ...node,
             metadata: {
                 ...node.metadata,
                 storyboard: {
-                    rows: updater(node.metadata?.storyboard?.rows || []),
+                    rows: result.rows,
                     visibleColumns: node.metadata?.storyboard?.visibleColumns || ["shotNumber", "durationSeconds", "videoMotionPrompt", "dialogue", "assets"],
                     referenceNodeIds: node.metadata?.storyboard?.referenceNodeIds || [],
                 },
             },
         } : node));
-    }, [setNodes]);
+    }, [connectionsRef, nodesRef, setConnections, setNodes]);
 
     const replaceScriptRows = useCallback((nodeId: string, rows: StoryboardRow[]) => {
-        const rowIds = new Set(rows.map((row) => `row:${row.id}`));
-        const storyboardRowIds = new Set(rows.map((row) => row.id));
-        const previousRows = new Map((nodesRef.current.find((node) => node.id === nodeId)?.metadata?.storyboard?.rows || []).map((row) => [row.id, row]));
-        const nextRows = rows.map((row) => invalidateEditedPromptVariables(previousRows.get(row.id), row));
-        setConnections((current) => current
-            .filter((connection) => connection.fromNodeId !== nodeId && connection.toNodeId !== nodeId || !connection.storyboardRowId || storyboardRowIds.has(connection.storyboardRowId))
-            .filter((connection) => connection.fromNodeId !== nodeId || !connection.fromHandleId?.startsWith("row:") || rowIds.has(connection.fromHandleId))
-            .filter((connection) => connection.toNodeId !== nodeId || !connection.toHandleId?.startsWith("row:") || rowIds.has(connection.toHandleId)));
-        updateScriptRows(nodeId, () => nextRows);
-    }, [nodesRef, setConnections, updateScriptRows]);
+        updateScriptRows(nodeId, () => rows);
+    }, [updateScriptRows]);
 
     const addScriptRow = useCallback((nodeId: string) => {
         updateScriptRows(nodeId, (rows) => [...rows, createStoryboardRow(rows.length + 1)]);
@@ -294,7 +294,7 @@ export function useCanvasStoryboard({
             metadata: {
                 ...scriptNode.metadata,
                 storyboard: {
-                    rows: (scriptNode.metadata?.storyboard?.rows || []).map((row) => ({ ...row, imageNodeId: imageNodeByRowId.get(row.id) || row.imageNodeId })),
+                    rows: (scriptNode.metadata?.storyboard?.rows || []).map((row) => imageNodeByRowId.has(row.id) ? { ...row, imageNodeId: imageNodeByRowId.get(row.id), imageBindingStale: undefined } : row),
                     visibleColumns: scriptNode.metadata?.storyboard?.visibleColumns || ["shotNumber", "durationSeconds", "videoMotionPrompt", "dialogue", "assets"],
                     referenceNodeIds: scriptNode.metadata?.storyboard?.referenceNodeIds || [],
                 },

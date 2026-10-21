@@ -121,12 +121,20 @@ func opStoryboardRowUpdate(ctx *Context, params json.RawMessage) (any, error) {
 	if strings.TrimSpace(args.CanvasID) == "" || strings.TrimSpace(args.NodeID) == "" {
 		return nil, InvalidArg("invalid_params", "canvasId 与 nodeId 必填")
 	}
+	before, err := ctx.Domain.UserCanvasProject(ctx.UserID, args.CanvasID)
+	if err != nil {
+		return nil, mapDomainError(err)
+	}
+	var previous map[string]any
+	if err := json.Unmarshal(before, &previous); err != nil {
+		return nil, AsError(err)
+	}
 	_, updated, err := ctx.Domain.UpdateUserCanvasStoryboardRows(ctx.UserID, args.CanvasID, args.NodeID, args.Patches, args.ExpectedRevision)
 	if err != nil {
 		return nil, mapDomainError(err)
 	}
 	return canvasWriteResult(ctx, args.CanvasID, func(doc map[string]any) map[string]any {
-		return map[string]any{"canvasId": args.CanvasID, "nodeId": args.NodeID, "updated": updated, "rowCount": len(docStoryboardRows(doc, args.NodeID))}
+		return map[string]any{"canvasId": args.CanvasID, "nodeId": args.NodeID, "updated": updated, "rowCount": len(docStoryboardRows(doc, args.NodeID)), "deletedEdgeIds": deletedStoryboardEdgeIDs(previous, doc)}
 	})
 }
 
@@ -156,18 +164,22 @@ func opStoryboardRowRemove(ctx *Context, params json.RawMessage) (any, error) {
 		return nil, mapDomainError(err)
 	}
 	return canvasWriteResult(ctx, args.CanvasID, func(doc map[string]any) map[string]any {
-		current := map[string]bool{}
-		connections, _ := doc["connections"].([]any)
-		for _, raw := range connections {
-			if edge, ok := raw.(map[string]any); ok {
-				if id, ok := edge["id"].(string); ok {
-					current[id] = true
-				}
+		return map[string]any{"canvasId": args.CanvasID, "nodeId": args.NodeID, "removed": len(args.RowIDs), "rowCount": remaining, "deletedEdgeIds": deletedStoryboardEdgeIDs(previous, doc)}
+	})
+}
+
+func deletedStoryboardEdgeIDs(previous, doc map[string]any) []string {
+	current := map[string]bool{}
+	connections, _ := doc["connections"].([]any)
+	for _, raw := range connections {
+		if edge, ok := raw.(map[string]any); ok {
+			if id, ok := edge["id"].(string); ok {
+				current[id] = true
 			}
 		}
-		deleted, _ := removeCanvasEdges(previous, func(edge map[string]any) bool { id, _ := edge["id"].(string); return !current[id] })
-		return map[string]any{"canvasId": args.CanvasID, "nodeId": args.NodeID, "removed": len(args.RowIDs), "rowCount": remaining, "deletedEdgeIds": deleted}
-	})
+	}
+	deleted, _ := removeCanvasEdges(previous, func(edge map[string]any) bool { id, _ := edge["id"].(string); return !current[id] })
+	return deleted
 }
 
 // docStoryboardRows 从写入后的画布文档里取目标分镜节点的当前行数，用于回执里的行数投影。

@@ -61,6 +61,9 @@ func reconcileStoryboardDocument(before, after json.RawMessage) (json.RawMessage
 			}
 			if old != nil {
 				invalidateStoryboardPromptTemplates(old, row)
+				if output := invalidateStoryboardImageBinding(old, row); output != "" {
+					removeStoryboardImageOutputConnection(next, id, rowID, output)
+				}
 			}
 		}
 		removed := map[string]bool{}
@@ -83,7 +86,7 @@ func reconcileStoryboardDocument(before, after json.RawMessage) (json.RawMessage
 	// UI journal receipts confirm the submitted document, so never silently
 	// persist a different graph. Manual UI already performs these transformations.
 	if string(canonical) != string(original) {
-		return nil, kernel.NewAppError(http.StatusBadRequest, "分镜修改须清除旧提示词模板、删除行的连线并重排镜号")
+		return nil, kernel.NewAppError(http.StatusBadRequest, "分镜修改须清除旧提示词模板、过期图片关联、删除行的连线并重排镜号")
 	}
 	return after, nil
 }
@@ -101,6 +104,37 @@ func invalidateStoryboardPromptTemplates(before, after map[string]any) {
 			delete(after, variables)
 		}
 	}
+}
+
+func invalidateStoryboardImageBinding(before, after map[string]any) string {
+	output := nodeString(before, "imageNodeId")
+	imagePrompt := func(row map[string]any) string {
+		prompt, _ := row["imageGenerationPrompt"].(string)
+		if prompt == "" {
+			prompt, _ = row["plotDescription"].(string)
+		}
+		return strings.TrimSpace(prompt)
+	}
+	current := nodeString(after, "imageNodeId")
+	if output == "" || (current != "" && current != output) || imagePrompt(before) == imagePrompt(after) {
+		return ""
+	}
+	delete(after, "imageNodeId")
+	after["imageBindingStale"] = true
+	return output
+}
+
+func removeStoryboardImageOutputConnection(doc map[string]any, scriptID, rowID, outputID string) {
+	connections, _ := doc["connections"].([]any)
+	kept := make([]any, 0, len(connections))
+	for _, raw := range connections {
+		edge, _ := raw.(map[string]any)
+		if edge["fromNodeId"] == scriptID && edge["toNodeId"] == outputID && (edge["fromHandleId"] == "row:"+rowID || edge["storyboardRowId"] == rowID) {
+			continue
+		}
+		kept = append(kept, raw)
+	}
+	doc["connections"] = kept
 }
 
 func removeStoryboardConnections(doc map[string]any, nodeID string, remove map[string]bool) {

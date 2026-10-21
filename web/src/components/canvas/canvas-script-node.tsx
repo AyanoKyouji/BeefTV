@@ -291,6 +291,7 @@ export function CanvasScriptNodeContent({
                     <GenerationBatchDetails batch={batch} rows={rows} onRetryItem={(itemId) => onRetryBatchItem(batch.id, itemId)} />
                 </Modal>
             ) : null}
+            <StoryboardImageBindingNotice rows={rows} />
             <StoryboardMiniPipeline pipeline={pipeline} theme={theme} rows={rows} />
             <div className="storyboard-header-gutter grid h-9 shrink-0 items-center border-b text-xs font-semibold" style={{ borderColor: theme.node.stroke, color: theme.node.muted, gridTemplateColumns: SCRIPT_GRID_TEMPLATE }}>
                 <HeaderCell borderColor={theme.node.stroke} align="center">
@@ -600,6 +601,12 @@ function batchItemTone(item?: CanvasGenerationBatchItem): CanvasNodeStatus | und
     return "loading";
 }
 
+function StoryboardImageBindingNotice({ rows }: { rows: StoryboardRow[] }) {
+    const stale = rows.filter((row) => row.imageBindingStale && !row.imageNodeId);
+    if (!stale.length) return null;
+    return <div role="status" className="shrink-0 bg-foreground/[.04] px-3 py-2 text-xs leading-5 text-foreground/70">第 {stale.map((row) => row.shotNumber).join("、")} 镜的图片输入已更新；旧图和任务已保留，请重新生成分镜图。</div>;
+}
+
 export function CanvasScriptEditor({
     node,
     nodes,
@@ -720,6 +727,7 @@ export function CanvasScriptEditor({
 
     return (
         <Modal title={node?.title || "分镜脚本"} open={open} onCancel={onClose} footer={null} width="min(1480px, calc(100vw - 40px))" centered destroyOnHidden>
+            <StoryboardImageBindingNotice rows={rows} />
             <div className="mb-3 flex flex-wrap items-center gap-2">
                 <Input.Search className="w-72" allowClear placeholder="筛选画面、台词或提示词" value={query} onChange={(event) => setQuery(event.target.value)} />
                     <CheckboxGroup className="script-column-picker" options={columnOptions} value={visibleColumns} onChange={(values) => onVisibleColumnsChange(values)} />

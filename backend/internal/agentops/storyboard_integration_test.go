@@ -7,13 +7,17 @@ import (
 )
 
 func TestStoryboardOperationsReceiptReplayAndUndo(t *testing.T) {
-	for _, op := range []string{"canvas.script.rows.append", "canvas.script.row.update", "canvas.script.row.remove"} {
-		t.Run(op, func(t *testing.T) {
+	for _, scenario := range []string{"canvas.script.rows.append", "canvas.script.row.update", "canvas.script.row.remove", "image-prompt-update"} {
+		t.Run(scenario, func(t *testing.T) {
+			op := scenario
+			if scenario == "image-prompt-update" {
+				op = "canvas.script.row.update"
+			}
 			h := newHarness(t)
 			doc := h.canvas(t)
 			node := doc["nodes"].([]any)[0].(map[string]any)
 			node["type"] = "script"
-			node["metadata"] = map[string]any{"storyboard": map[string]any{"rows": []any{map[string]any{"id": "shot-original", "shotNumber": 1, "dialogue": "original"}}}}
+			node["metadata"] = map[string]any{"storyboard": map[string]any{"rows": []any{map[string]any{"id": "shot-original", "shotNumber": 1, "durationSeconds": 6, "dialogue": "original", "imageGenerationPrompt": "old image", "imageNodeId": "target"}}}}
 			doc["nodes"] = append(doc["nodes"].([]any), map[string]any{"id": "target", "type": "image", "position": map[string]any{"x": 100, "y": 100}})
 			doc["connections"] = []any{
 				map[string]any{"id": "row-edge", "fromNodeId": "n1", "toNodeId": "target", "fromHandleId": "row:shot-original"},
@@ -35,6 +39,9 @@ func TestStoryboardOperationsReceiptReplayAndUndo(t *testing.T) {
 				p["rows"] = []any{map[string]any{"dialogue": "new"}}
 			case "canvas.script.row.update":
 				p["patches"] = []any{map[string]any{"rowId": "shot-original", "dialogue": "new"}}
+				if scenario == "image-prompt-update" {
+					p["patches"] = []any{map[string]any{"rowId": "shot-original", "imageGenerationPrompt": "new image"}}
+				}
 			case "canvas.script.row.remove":
 				p["rowIds"] = []string{"shot-original"}
 			}
@@ -55,6 +62,11 @@ func TestStoryboardOperationsReceiptReplayAndUndo(t *testing.T) {
 			if op == "canvas.script.row.remove" {
 				if !reflect.DeepEqual(state.Change.DeletedEdgeIDs, []string{"row-edge", "row-in", "row-tag"}) || len(h.canvas(t)["connections"].([]any)) != 1 {
 					t.Fatal("removed row left dangling edges or deleted unrelated edges")
+				}
+			}
+			if scenario == "image-prompt-update" {
+				if !reflect.DeepEqual(state.Change.DeletedEdgeIDs, []string{"row-edge", "row-tag"}) || len(h.canvas(t)["connections"].([]any)) != 2 {
+					t.Fatal("image edit did not record exactly the removed output edges")
 				}
 			}
 			if _, err := h.service.UndoAssistantTurn(h.userID, h.canvasID, turn); err != nil {

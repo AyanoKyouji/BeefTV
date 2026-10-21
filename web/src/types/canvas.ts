@@ -132,6 +132,7 @@ export type StoryboardRow = {
     negativePrompt: string;
     assetBindings: StoryboardAssetBinding[];
     imageNodeId?: string;
+    imageBindingStale?: boolean;
     videoNodeId?: string;
     status?: CanvasNodeStatus;
     errorDetails?: string;
