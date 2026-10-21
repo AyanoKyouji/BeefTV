@@ -101,15 +101,21 @@ $dataDir = "$PWD\dev017-test-data"
 5. 重新启动（记录 PID 2）
 6. 核对项目内容与素材
 
-对比脚本（复用 DEV-003 `Inspect-Saved-Project.mjs`）：
+对比脚本（复用 DEV-003 `Inspect-Saved-Project.mjs`，需 `--db` / `--title` 全参）：
 
 ```powershell
 # 首次保存后
-node Inspect-Saved-Project.mjs --out windows-before.json
+& "$PWD\backend\cmd\desktop\build\bin\agent-host\runtime\node.exe" `
+  Inspect-Saved-Project.mjs --db "$PWD\dev017-test-data\open_ai_canvas.db" `
+  --title "DEV-017 Windows 基础验证" --out windows-before.json
 # 重启后
-node Inspect-Saved-Project.mjs --out windows-after.json --compare windows-before.json
+& "$PWD\backend\cmd\desktop\build\bin\agent-host\runtime\node.exe" `
+  Inspect-Saved-Project.mjs --db "$PWD\dev017-test-data\open_ai_canvas.db" `
+  --title "DEV-017 Windows 基础验证" --out windows-after.json --compare windows-before.json
 # 期望 PASS
 ```
+
+已知修正（Windows 侧 W3，Mac 侧待合入）：文本节点正文在 `composerContent`（回退 `prompt`），采集器需按此顺序读取。
 
 ## 6. 回传材料清单
 
