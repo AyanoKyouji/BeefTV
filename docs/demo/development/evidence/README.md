@@ -109,3 +109,11 @@ DEV-012 双入口交付一致性，起始提交 `2d0c81b`，结果 Verified（Ma
 ## 20261021-144414-DEV-012-017-RETEST
 
 独立复测基线 `e6d39ee`。原材料位于本机 Git 忽略目录 `.local/retest-dev012-017-20261021-144414/`：`runtime.py`、`browser.mjs`、`uncertainty.mjs`、`final-audit.mjs`；`go-tests*.jsonl`、`go-app-targeted.jsonl`、`go-fixed-final.jsonl`、`go-adjacent-final.jsonl` 及各 summary；`web-tests.log`、`web-build.log`、`collector-tests.log`；`collector-repro.json`、`uncertain-before-fix.log`、所有 `browser/uncertainty/final-audit-failure-*`；最终 `browser-result.json`、`uncertainty-result.json`、`offline-edit-before/after.json` 与对照、截图、进程日志、egress 探针、`final-manifest.json` 及 `cleanup-final.json`。修复前问题与控制器失败未删除。隔离数据、配置及媒体不提交，详细事实见[复测报告](../reports/DEV-012-017_Retest_20261021-144414.md)。
+
+## 20261021-152916-DEV-018
+
+Mac Agent 完整闭环，最终版本 `04522b8`。起始 `e382ac7` 暴露自主分镜关联缺口，业务修复 `afb2caf`。同版两新项目各完成真实创建三镜、最新输入读取、正式行关联、提案确认、真实图片落盘与离线冷启动，结果 Fixed（Mac Go/Vite/官方宿主，明示第二镜）；最终 revision 16/18。真实图片共 2 张，文本 dispatch 含失败总计 76；没有视频或 Seedream，费用未核实。
+
+本机忽略目录 `.local/dev018-20261021-152916/` 保存 `runtime.py`、`browser.mjs`、`audit.py`、`finish.py`；`result.json`、`final-audit.json`、专项/共享层测试 JSONL、宿主测试日志。`run1/run1b/run1c` 为失败尝试；`run1d/run2d` 为最终连续两轮，分别含 `run.json`、`state.json`、`initial/created/proposed/before-restart/after-restart` JSON、`creation-message/edited-input/model-summary`、真实 stream/history/events、`task.json`、`task-states.json`、`task-submission-*`、`audit-result.json`、`binary-sha256.json`、`restore-result.json`、`offline-egress.json`、`runtime-state.json`、运行日志与创建/提案/交付/离线截图。所有 `*-failure-*` 和控制器失败日志保留。
+
+历史 before/after 全文档深比较为跨进程依据；停止后两份 `collector-*` 是同库只读检查，不能误称历史退出前采集。独立隔离数据在 `.local/project-workbench-debug/dev018-20261021-152916-<run>/`，含正式业务 SQLite、Durable SQLite、请求账本和真实媒体；这些文件及凭证不提交。详细结果和限制见 [DEV-018 报告](../reports/DEV-018_20261021-152916.md)。
