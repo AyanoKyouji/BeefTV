@@ -125,3 +125,9 @@ Mac 手动闭环，起始 `db4a15a`，空图片设置上传入口修复 `af9282c
 本机 Git 忽略目录 `.local/dev019-20261021-161026/` 保存 `runtime.py/browser.mjs/finish.py/audit.py`、`import-source.json`、“本地测试素材.png”、`flow-result.json/result.json`、构建/定向测试日志及 Go JSONL。`manual/` 含版本、状态、创建/导入/生成前/退出前/首次恢复/离线编辑/最终恢复 JSON；两素材在线及离线文档、实际任务状态与安全提交摘要、受控失败任务/编辑快照、各阶段结果和截图、禁止外网探针、进程状态/日志、所有 `*-failure-*`。只读审计曾误把 INTERNAL 计为外部请求的原日志也保留。
 
 独立数据位于 `.local/project-workbench-debug/dev019-20261021-161026-manual/`，含业务 SQLite、本地配置及两个真实来源的资源字节；不提交数据库、媒体、凭证、浏览器资料和原日志。首次离线编辑后定位中断，接续仅继续移动/保存/恢复，没有第二次真实生成；不把它记为一次无中断自动运行。
+
+## 20261021-STAGE6-ACCEPTANCE-AUDIT
+
+阶段六证据盘点，基线 `cce5bbc`。本轮仅对照计划/报告并只读核对现存文档与媒体，未启动应用、运行新业务验收或调用模型。DEV-018 两轮的 before/after 记录及图片哈希、DEV-019 两组恢复记录及两种来源的图片哈希均对应；这不是对历史测试的重新执行。最新剩余项见[收口核对报告](../reports/STAGE-6_Acceptance-Audit_20261021.md)。
+
+忽略目录 `.local/stage6-audit-20261021/` 保存 `audit-evidence.py`、`evidence-audit.json`、`evidence-audit.log`。本轮读到的 DEV-018 `final-audit.json` SHA-256 为 `7916deac9643788613cad580d58a52b4728c1812858300f3f85fb486b7d900c5`，DEV-019 `result.json` 为 `1390aecf336185ac90a6d02ea3e9a03551cc808baf9cf629f22762bd4f6e2f4c`；另记录复测 manifest/cleanup 摘要，仅用于定位材料，不证明当前进程状态或最终平台通过。没有修改原业务数据或原始运行材料。
