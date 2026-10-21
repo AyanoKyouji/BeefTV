@@ -176,6 +176,8 @@ AT007 状态反馈补验，起始 `0a8dfd6`，修复 `f010bbd`，Fixed（Mac Go/
 
 ## 20261021-MAC-NATIVE
 
+后续目录切换暴露前端 scope 污染问题，基础验证未覆盖。修复及当前画布恢复见[Agent 读取画布失败修复](../reports/MAC-AGENT-CANVAS_20261021.md)。本机新增证据保存在忽略目录 `.local/agent-blank-canvas-20261021/`，含日常数据库恢复前备份、当前缓存快照、正式接口恢复/读取结果、首次构建失败及重试日志；不发布凭据或业务数据。
+
 原生构建 `a7b7c01`，v1.7.26 / darwin-arm64，唯一安装 `/Applications/BeefTV.app`；主程序 SHA-256 `ff418bfd97b4162ebe7f39bb421ca52dbe982de59a58f9380e018bbdb66025cb`。本机忽略目录 `.local/mac-native-20261021/` 保存 `build.sh/build.log`、`bundle-audit.py/bundle-manifest.json`（15,554 文件/400,023,885 bytes）、`runtime.py/offline.sb/business.py/finish.py`、`host-status.json`、`bundled-cli-canvas.json`、启动/受控停止/离线探针记录、`business-state/before/after/comparison` 及 `final-audit.json`。原生测试库位于 `.local/project-workbench-debug/mac-native-20261021`，没有复制日常库或原验收数据。
 
 `native-before/after` 的首次严格比较 FAIL（10→11，界面补齐默认字段），`post-observation-diff.json` 和 `initial-ui-normalization-check.json` 保留，未筛字段改判。新 `native-initialized-before/after` 在另一次离线冷启动为 revision 11，全文档 SHA-256 `ec555e25d1e00d2289d152c3cda82700a5320c10befb9b702de0c824878aba70`，`native-initialized-after-compare.json` PASS；`initialized-revision-watch.json` 12 个采样稳定。4 节点/3 镜/1 正式输出关系（空图）、两段正文/布局/稳定 ID 完整，Task/API 日志/assistant_turns/Asset/Resource 均 0。GUI 用户确认正常，CUA 读取超时/中止，无自动 GUI 截图证据。
