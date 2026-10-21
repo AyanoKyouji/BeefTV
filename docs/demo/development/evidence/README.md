@@ -173,3 +173,11 @@ AT007 状态反馈补验，起始 `0a8dfd6`，修复 `f010bbd`，Fixed（Mac Go/
 起始 `2382cee`，产品代码最近修复基线 `84f918c`。Windows 原生构建交接准备：公开说明和脚本位于 `handoff/WINDOWS-FINAL/`，本机忽略目录 `.local/windows-final-prep-20261021/` 保存 `tool-tests.log`（新增工具 14 + 现有采集器 12，共 26 PASS）、完整源码 `BeefTV-Windows-Final-source.zip`、独立 `START-HERE.md`、`source-manifest.json`、`source-check.json`、`archive-check.json`、`package-summary.json` 及源包摘要。快照精确提交、成员数量/总字节/摘要以这些清单为准；从 Git 提交导出，不包括工作区未提交内容或 `.local`。
 
 源码/完整载荷验证器专项及 schemaVersion 2 全文档采集器在 Mac Node 24.15.0 检查通过；实际源快照逐文件哈希及 zip 路径/成员/CRC 核对。没有 PowerShell 原生解析/执行、Windows 编译/窗口或模型调用；Windows 侧先解析辅助脚本，再按阶段执行并回传。原业务数据、模型配置、缓存、私有日志和媒体成果未进入源码包。详见[准备报告](../reports/WINDOWS-FINAL-PREP_20261021.md)与[可直接交给 Windows 模型的说明](../handoff/WINDOWS-FINAL/README.md)。
+
+## 20261021-MAC-NATIVE
+
+原生构建 `a7b7c01`，v1.7.26 / darwin-arm64，唯一安装 `/Applications/BeefTV.app`；主程序 SHA-256 `ff418bfd97b4162ebe7f39bb421ca52dbe982de59a58f9380e018bbdb66025cb`。本机忽略目录 `.local/mac-native-20261021/` 保存 `build.sh/build.log`、`bundle-audit.py/bundle-manifest.json`（15,554 文件/400,023,885 bytes）、`runtime.py/offline.sb/business.py/finish.py`、`host-status.json`、`bundled-cli-canvas.json`、启动/受控停止/离线探针记录、`business-state/before/after/comparison` 及 `final-audit.json`。原生测试库位于 `.local/project-workbench-debug/mac-native-20261021`，没有复制日常库或原验收数据。
+
+`native-before/after` 的首次严格比较 FAIL（10→11，界面补齐默认字段），`post-observation-diff.json` 和 `initial-ui-normalization-check.json` 保留，未筛字段改判。新 `native-initialized-before/after` 在另一次离线冷启动为 revision 11，全文档 SHA-256 `ec555e25d1e00d2289d152c3cda82700a5320c10befb9b702de0c824878aba70`，`native-initialized-after-compare.json` PASS；`initialized-revision-watch.json` 12 个采样稳定。4 节点/3 镜/1 正式输出关系（空图）、两段正文/布局/稳定 ID 完整，Task/API 日志/assistant_turns/Asset/Resource 均 0。GUI 用户确认正常，CUA 读取超时/中止，无自动 GUI 截图证据。
+
+初次非法 text→script 关系拒绝、离线 profile 语法错误、CLI 辅助断言结构误读、普通沙箱 HTTP 权限错误均为控制路径问题，失败记录/日志保留；没有为它们修改产品代码。测试为受控 SIGTERM，不称已验证菜单正常退出。最终测试进程结束，常规默认工作区 PID 61472 已打开且 ready，未带占位模型/离线限制，原 daily 服务未改动。令牌只在私有运行状态/数据目录保留，日志/库/媒体/配置不提交。见[报告](../reports/MAC-NATIVE_20261021.md)与[使用说明](../Mac原生客户端.md)。
