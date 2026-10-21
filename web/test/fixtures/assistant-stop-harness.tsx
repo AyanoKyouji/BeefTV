@@ -13,6 +13,7 @@ function Harness() {
         control.entered = true;
         if (control.pending) await control.pending;
         if (control.failure) throw new Error("Synthetic canvas save failure");
+        if (location.search.includes("new-canvas")) await fetch("/api/test-canvas-save", { method: "POST" });
     } : undefined });
     return <main>
         <button onClick={() => void assistant.restartHost()}>刷新状态</button>

@@ -13,6 +13,7 @@ import { defaultFeatureAvailability, useUserStore } from "@/stores/use-user-stor
 import type { WorkspaceBootstrapPayload } from "@/services/api/workspace";
 import { setWorkspaceCapabilitySnapshot } from "@/services/workspace-mode";
 import { withGenerationConsumersPaused } from "@/services/generation-consumer-lifecycle";
+import { hydrateLocalCanvasProjectsFromBackend } from "@/services/local-workspace-repository";
 
 /**
  * Hydrate the one implicit local workspace. This is deliberately not an auth
@@ -78,6 +79,9 @@ async function hydrateLocalWorkspace(payload: WorkspaceBootstrapPayload) {
         if (!persistedPlugins) usePluginStore.setState({ installations: [], runtimeStatuses: {}, pluginStates: {} });
         if (!persistedCreationPreferences) useCreationPreferencesStore.setState({ preferences: {} });
         if (!persistedConfig) useConfigStore.getState().replaceConfig(localWorkspaceConfig(defaultConfig));
+        // Cache hydration must finish in the selected workspace before backend
+        // documents or their confirmed revision journals are projected into it.
+        await hydrateLocalCanvasProjectsFromBackend();
     } finally {
         useUserStore.getState().setHydrated(true);
     }

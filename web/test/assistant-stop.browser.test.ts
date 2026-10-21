@@ -11,6 +11,8 @@ let oldHistoryResolve: ((response: Response) => void) | null = null, oldSteerRes
 const steerUsers: string[] = [];
 let statusGate: Promise<void> | undefined;
 let statusBlocked = false;
+let canvasMustBeSaved = false, canvasSaved = false;
+beforeEach(() => { canvasMustBeSaved = false; canvasSaved = false; });
 
 beforeEach(() => { cancelled = false; historyFailure = false; settle = false; chatRequests = 0; cancelRequests = 0; steerRequests = 0; scopeTest = false; holdOldHistory = false; configurationBlocked = false; seedHistoricalTurn = false; historyFailureReason = "host_unreachable"; historyReads = 0; oldHistoryResolve = null; oldSteerResolve = null; steerUsers.length = 0; });
 beforeAll(async () => {
@@ -27,6 +29,8 @@ beforeAll(async () => {
         const pathname = new URL(req.url).pathname;
         if (pathname.endsWith("/assistant/steer")) steerRequests++;
         if (pathname === "/harness.js") return new Response(js, { headers: { "content-type": "application/javascript" } });
+        if (pathname === "/api/test-canvas-save") { canvasSaved = true; return ok({}); }
+        if (canvasMustBeSaved && !canvasSaved && (pathname.endsWith("/assistant/history") || pathname.endsWith("/assistant/sessions"))) return Response.json({ code: 404, msg: "Canvas missing" }, { status: 404 });
         const user = req.headers.get("cookie")?.includes("test-user=B") ? "B" : "A";
         if (scopeTest && pathname.endsWith("/assistant/sessions")) return ok({ currentSessionId: "session-" + user, sessions: [] });
         if (scopeTest && pathname.endsWith("/assistant/history")) {
@@ -67,6 +71,37 @@ beforeAll(async () => {
     browser = await chromium.launch({ executablePath, headless: true });
 }, 60000);
 afterAll(async () => { await browser?.close(); server?.stop(true); });
+
+test("a blank canvas is saved before reading its history and admitting the first message", async () => {
+    canvasMustBeSaved = true;
+    const page = await browser.newPage();
+    try {
+        await page.goto(server.url.toString() + "?save-barrier&new-canvas");
+        await page.getByRole("button", { name: "重新读取", exact: true }).click();
+        await page.waitForFunction(() => Boolean(document.querySelector('[data-testid="history-error"]')?.textContent));
+        await page.getByRole("button", { name: "开始", exact: true }).click();
+        await page.waitForFunction(() => Boolean(document.querySelector('[data-testid="streamed"]')?.textContent || document.querySelector('[data-testid="error"]')?.textContent));
+        expect(await page.getByTestId("error").textContent()).toBe("");
+        expect(await page.getByTestId("streamed").textContent()).toContain("两个草案已创建");
+        expect(canvasSaved).toBe(true);
+        expect(chatRequests).toBe(1);
+        expect(await page.getByTestId("history-error").textContent()).toBe("");
+    } finally { await page.close(); }
+}, 15000);
+
+test("a blank canvas with a failed save never creates an Agent session or dispatches a message", async () => {
+    canvasMustBeSaved = true;
+    const page = await browser.newPage();
+    try {
+        await page.goto(server.url.toString() + "?save-barrier&new-canvas");
+        await page.evaluate(() => { (window as any).__saveBarrier.failure = true; });
+        await page.getByRole("button", { name: "开始", exact: true }).click();
+        await page.getByTestId("error").filter({ hasText: "画布还没保存成功" }).waitFor();
+        expect(canvasSaved).toBe(false);
+        expect(chatRequests).toBe(0);
+        expect(await page.getByTestId("session").textContent()).toBe("");
+    } finally { await page.close(); }
+}, 15000);
 
 test("canvas preflight runs after pending host readiness, immediately before dispatch", async () => {
     const page = await browser.newPage();

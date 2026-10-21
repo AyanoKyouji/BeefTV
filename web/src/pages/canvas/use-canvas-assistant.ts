@@ -396,6 +396,7 @@ export function useCanvasAssistant({ canvasId, onCanvasChanged, beforeSend }: Op
             const ready = await waitForAssistant(controller.signal);
             assertUserScope(expectedScope);
             setStatus(ready);
+            await flushBeforeSend(controller.signal);
             if (!run.historyLoaded && !await loadHistory(targetCanvas)) throw new Error("对话还没读回来，请重新读取后再发送");
             assertUserScope(expectedScope);
             if (!run.sessionId) run.sessionId = await createAssistantSession(targetCanvas);
