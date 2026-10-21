@@ -101,7 +101,7 @@
   },
   {
     "id": "canvas.edge.create",
-    "summary": "连接两个节点（重复连接幂等返回）",
+    "summary": "连接参考节点；关联分镜图片输出时必须从 script 连到 image 并提供 storyboardRowId，同时登记行归属，无需先生成（重复连接幂等返回）",
     "readOnly": false,
     "scope": "canvas",
     "params": {
@@ -113,13 +113,19 @@
           "type": "integer"
         },
         "fromNodeId": {
+          "description": "来源节点；分镜输出时为脚本节点 ID",
           "type": "string"
         },
         "operationId": {
           "description": "调用方生成的稳定幂等键；重试同一操作必须复用同一个值，服务端据此回读原结果",
           "type": "string"
         },
+        "storyboardRowId": {
+          "description": "可选；分镜图片输出必须提供该脚本中真实行 ID，服务端同时建立行关联与输出连线",
+          "type": "string"
+        },
         "toNodeId": {
+          "description": "目标节点；分镜图片输出时为图片节点 ID",
           "type": "string"
         }
       },
