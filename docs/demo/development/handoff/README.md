@@ -8,6 +8,10 @@
 
 新的 Windows 回归优先检出指定 Git 提交并按仓库原生脚本构建，继续保留产物摘要、系统环境、宿主就绪和项目恢复证据。
 
+## DEV-018/019
+
+2026-10-21 准备的 Windows E2E 完整业务闭环（DEV-018 Agent 路径连续两次 + DEV-019 手动路径）交接材料。在 DEV-017 通过的最终构建（`f84d5a1` / exe SHA `ffc8a465…3e9f4a`）上执行。说明见 [DEV-018-019/README.md](DEV-018-019/README.md)。修正版快照采集器已入库 [docs/demo/development/tools/Inspect-Saved-Project.mjs](../../tools/Inspect-Saved-Project.mjs)。
+
 ## DEV-017
 
 2026-10-21 基于 `demo/ai-media` 分支 `f84d5a1` 的最终 Windows 构建交接。说明与验证清单见 [DEV-017/README.md](DEV-017/README.md)。离线源码包 SHA-256：`3f979fe415dbbdb06e3b7afc7bea75956d8912e5ac7c9f1a7e6abb0b8f37c709`。
