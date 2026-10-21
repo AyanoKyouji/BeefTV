@@ -16,6 +16,27 @@ export type AssistantStatusNotice = {
 /** 兜底文案：原因缺失或后端给了我们还不认识的值时用这一句。 */
 export const ASSISTANT_UNAVAILABLE_FALLBACK = "助手暂时用不了，请稍后再试";
 
+export function assistantActivityState(input: {
+    streaming: boolean;
+    awaitingReceipt: boolean;
+    available: boolean;
+    historyLoaded: boolean;
+    historyError: boolean;
+    sessionBusy: boolean;
+    failed: boolean;
+    pendingProposal: boolean;
+    cancelled: boolean;
+}) {
+    if (input.streaming) return { phase: "processing", text: "处理中", animated: true };
+    if (input.awaitingReceipt) return { phase: "receiving", text: "正在确认结果", animated: true };
+    if (input.sessionBusy || !input.historyLoaded) return { phase: "loading", text: "正在读取对话", animated: false };
+    if (!input.available || input.historyError) return { phase: "unavailable", text: "尚未就绪", animated: false };
+    if (input.failed) return { phase: "error", text: "本轮未完成", animated: false };
+    if (input.pendingProposal) return { phase: "confirmation", text: "等待确认", animated: false };
+    if (input.cancelled) return { phase: "stopped", text: "已停止", animated: false };
+    return { phase: "idle", text: "就绪", animated: false };
+}
+
 export function assistantStatusNotice(reason: string | undefined): AssistantStatusNotice {
     switch (reason) {
         case "model_not_configured":

@@ -1,6 +1,6 @@
 import { createClientId } from "@/lib/client-id";
 import { Button, Dropdown, Tooltip } from "antd";
-import { History, MessageSquarePlus, X, ArrowUpRight } from "lucide-react";
+import { History, MessageSquarePlus, X, ArrowUpRight, Sparkles } from "lucide-react";
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { AppDrawer } from "@/components/ui/product/app-drawer";
@@ -14,10 +14,10 @@ import { captureUserScope, userScopeMatches } from "@/lib/user-scope-guard";
 import { getActiveUserScope, getActiveUserScopeEpoch, subscribeUserScope } from "@/lib/user-scope";
 import { attachmentFromCanvasReference, attachmentRangeError, readAssistantInputDraft, saveAssistantInputDraft, uploadAssistantAttachment } from "@/services/assistant-attachments";
 import { CanvasAssistantAttachments } from "./canvas-assistant-attachments";
-import { ASSISTANT_CONTINUE_PROMPT, ASSISTANT_STARTER_PROMPTS, assistantSkillLabel, assistantStatusNotice, assistantVisibleReply } from "./canvas-assistant-copy";
+import { ASSISTANT_CONTINUE_PROMPT, ASSISTANT_STARTER_PROMPTS, assistantActivityState, assistantSkillLabel, assistantStatusNotice, assistantVisibleReply } from "./canvas-assistant-copy";
 import { CanvasAssistantComposer } from "./canvas-assistant-composer";
 import { CanvasAssistantReply, CanvasAssistantTurnView, CanvasAssistantUserMessage } from "./canvas-assistant-turn";
-import { ASSISTANT_MAX_WIDTH, ASSISTANT_MIN_WIDTH, type CanvasAssistantController } from "./use-canvas-assistant";
+import { ASSISTANT_MAX_WIDTH, ASSISTANT_MIN_WIDTH, dismissedProposalKey, type CanvasAssistantController } from "./use-canvas-assistant";
 import "./canvas-assistant-sidebar.css";
 
 type Props = {
@@ -128,6 +128,18 @@ export function CanvasAssistantSidebar(props: Props) {
     }, [turnCount, assistant.streamed, assistant.pendingUserText, assistant.lifecycleNotice, props.proposalFeedback]);
 
     const notice = assistant.status && !assistant.status.available && assistant.status.reason !== "host_starting" ? assistantStatusNotice(assistant.status.reason) : null;
+    const latestTurn = assistant.turns.at(-1);
+    const pendingProposal = assistant.turns.some(turn => !assistant.turnStatus[turn.turnId]?.undone && turn.proposals?.some(proposal =>
+        !assistant.handledProposals.has(proposal.proposalId) && !assistant.handledProposals.has(dismissedProposalKey(proposal.proposalId)) && !props.runningProposalIds?.has(proposal.proposalId)));
+    const activity = assistantActivityState({
+        streaming: assistant.streaming, awaitingReceipt: assistant.awaitingReceipt,
+        available: Boolean(assistant.status?.available), historyLoaded: assistant.historyLoaded,
+        historyError: Boolean(assistant.historyError), sessionBusy: assistant.sessionBusy,
+        failed: Boolean(assistant.error || latestTurn?.error), pendingProposal,
+        cancelled: Boolean(latestTurn?.cancelled),
+    });
+    const activeProposals = assistant.turns.flatMap(turn => turn.proposals || []).filter(proposal => props.runningProposalIds?.has(proposal.proposalId));
+    const generationRunning = activeProposals.some(proposal => assistant.handledProposals.has(proposal.proposalId));
     const inputReady = draftLoaded && loadedDraftIdentity === draftIdentity;
     const composerDisabled = readOnly || !inputReady;
     const composerReason = readOnly ? "这个画布是只读的，不能让助手改动。" : !draftLoaded ? "正在读取未发送内容…" : loadedDraftIdentity !== draftIdentity ? "未能读取草稿，请重新读取后继续。" : undefined;
@@ -170,7 +182,14 @@ export function CanvasAssistantSidebar(props: Props) {
     const content = (
         <div className="canvas-assistant-panel" data-canvas-no-zoom>
             <header className="canvas-assistant-header">
-                <div className="canvas-assistant-heading"><h2>BeefTV Agent</h2></div>
+                <div className="canvas-assistant-heading">
+                    <h2>BeefTV Agent</h2>
+                    <span className="canvas-assistant-activity" role="status" aria-live="polite" data-phase={activity.phase} data-animated={activity.animated}>
+                        <Sparkles className="canvas-assistant-activity-icon size-3" aria-hidden="true" />
+                        {activity.text}
+                    </span>
+                    {activeProposals.length ? <span className="canvas-assistant-generation-status" role="status">{generationRunning ? "生成任务执行中" : "正在提交生成"}</span> : null}
+                </div>
                 <Tooltip title="新对话">
                     <Button type="text" size="small" aria-label="新对话" disabled={assistant.streaming || assistant.sessionBusy} icon={<MessageSquarePlus className="size-4" />} onClick={() => void assistant.startNewSession()} />
                 </Tooltip>
