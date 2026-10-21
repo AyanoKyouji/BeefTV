@@ -28,6 +28,9 @@ quit_installed_app() {
 # Wails binding generation starts the desktop composition root too, so the
 # installed process must release the data-directory lock before building.
 quit_installed_app
+if [[ -d "$INSTALLED_APP/Contents/Resources/agent-host/media-runtime" ]] && codesign --verify --deep --strict "$INSTALLED_APP"; then
+  export BEEFTV_MEDIA_RUNTIME_DIR="$INSTALLED_APP/Contents/Resources/agent-host/media-runtime"
+fi
 "$ROOT_DIR/scripts/build-beeftv-release.sh"
 
 if [[ ! -x "$STAGED_APP/Contents/MacOS/BeefTV" ]]; then

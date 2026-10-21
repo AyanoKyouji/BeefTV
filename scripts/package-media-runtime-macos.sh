@@ -14,6 +14,28 @@ esac
 source_commit=894da5ca7d
 source_url="https://codeload.github.com/FFmpeg/FFmpeg/tar.gz/$source_commit"
 source_sha=06cd2ab358134bd99e6f43b1792143e153a5b409ff1c0c88a1cf5ff9b1ea52f8
+# Local updates can reuse the signed installation's identical media runtime.
+# The normal release path still builds from the pinned source archive.
+reuse="${BEEFTV_MEDIA_RUNTIME_DIR:-}"
+if [[ -n "$reuse" ]] && node --input-type=module - "$reuse" "$target" "$source_sha" "$source_commit" <<'NODE'
+import { readFileSync, statSync } from 'node:fs';
+import { join } from 'node:path';
+import { createHash } from 'node:crypto';
+try {
+  const [dir, target, sourceSHA256, sourceCommit] = process.argv.slice(2);
+  const manifest = JSON.parse(readFileSync(join(dir, 'manifest.json'), 'utf8'));
+  const probeSHA256 = createHash('sha256').update(readFileSync(join(dir, 'ffprobe'))).digest('hex');
+  if (manifest.target !== target || manifest.sourceSHA256 !== sourceSHA256 || manifest.sourceCommit !== sourceCommit || manifest.probeSHA256 !== probeSHA256) process.exit(1);
+  for (const file of ['ffprobe', 'LICENSE', 'README.txt', 'manifest.json']) if (!statSync(join(dir, file)).isFile()) process.exit(1);
+} catch { process.exit(1); }
+NODE
+then
+  file "$reuse/ffprobe" | grep -q "$apple_arch" || { echo "Wrong cached ffprobe architecture" >&2; exit 1; }
+  mkdir -p "$(dirname "$destination")"
+  cp -R "$reuse" "$destination"
+  echo "Reused verified local ffprobe for $target: $destination"
+  exit 0
+fi
 scratch="$(mktemp -d "${TMPDIR:-/tmp}/beeftv-media.XXXXXX")"
 trap 'rm -rf "$scratch"' EXIT
 if [[ -z "$archive" ]]; then
