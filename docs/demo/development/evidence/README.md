@@ -131,3 +131,11 @@ Mac 手动闭环，起始 `db4a15a`，空图片设置上传入口修复 `af9282c
 阶段六证据盘点，基线 `cce5bbc`。本轮仅对照计划/报告并只读核对现存文档与媒体，未启动应用、运行新业务验收或调用模型。DEV-018 两轮的 before/after 记录及图片哈希、DEV-019 两组恢复记录及两种来源的图片哈希均对应；这不是对历史测试的重新执行。最新剩余项见[收口核对报告](../reports/STAGE-6_Acceptance-Audit_20261021.md)。
 
 忽略目录 `.local/stage6-audit-20261021/` 保存 `audit-evidence.py`、`evidence-audit.json`、`evidence-audit.log`。本轮读到的 DEV-018 `final-audit.json` SHA-256 为 `7916deac9643788613cad580d58a52b4728c1812858300f3f85fb486b7d900c5`，DEV-019 `result.json` 为 `1390aecf336185ac90a6d02ea3e9a03551cc808baf9cf629f22762bd4f6e2f4c`；另记录复测 manifest/cleanup 摘要，仅用于定位材料，不证明当前进程状态或最终平台通过。没有修改原业务数据或原始运行材料。
+
+## 20261021-164543-AT007
+
+AT007 状态反馈补验，起始 `0a8dfd6`，修复 `f010bbd`，Fixed（Mac Go/Vite/Chrome，正式官方 pi 宿主及 Task 链，上游为本机受控响应）。基线复现处理动画缺失，修复后最终 `fixed4` 完整 10 阶段/30 帧通过；明暗、减少动画、停止与 Agent 结束但图片仍生成的区分已核对。50 项相关测试及生产构建通过。计入失败尝试为 12 次本机文本请求、3 次已知 PNG 图片回放，零真实模型调用；不能计为新图片模型创作或最终 Windows 验收。
+
+本机忽略目录 `.local/at007-20261021-164543/` 保存 `runtime.py`、`supplier.mjs`、`browser.mjs`、`replay.png`、`supplier-events.jsonl`、`presentation-tests.log`、`stop-regression.log`、`web-build.log` 及 `final-audit.json`。`states/` 保存 `run.json`、`state.json`、`runtime-state.json`、`baseline-result.json`、`fixed4-result.json`，各阶段带时间的 DOM/动画采样、每阶段三帧截图、回合历史、外网拒绝探针及运行日志。`baseline` 与 `fixed/fixed2/fixed3` 中间尝试、所有 `*-failure-*` 原记录均保留；最终完整序列不是失败材料拼接。
+
+独立数据在 `.local/project-workbench-debug/at007-20261021-164543-states/`；仅配置合成凭证和 localhost 上游，操作系统及浏览器限制外网，日常数据和原 DEV-018/019 数据未改动。`final-audit.json` 记录四个修复文件 SHA-256、本机请求账本/服务计数、三个成功 Task 和 3027/8107/18107 端口关闭结果。数据库、配置、媒体、浏览器资料及原始日志不提交，详细结果与控制器失败说明见[任务报告](../reports/AT007_20261021-164543.md)。
