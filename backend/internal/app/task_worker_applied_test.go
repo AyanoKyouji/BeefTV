@@ -57,6 +57,23 @@ func TestExecutionFailureOutcomeAppliedFollowsTerminalWrite(t *testing.T) {
 	})
 }
 
+func TestAcceptedImageQueryTimeoutPersistsOriginalTaskAndRetryLock(t *testing.T) {
+	task := &model.Task{ID: "query-timeout", Type: "canvas_image", ProviderRequestID: "original-provider-job", Status: model.TaskStatusRunning, LeaseOwner: "owner"}
+	repo := &taskTerminalRepositoryStub{task: task}
+	cause := taskTimeoutFailure(*task, context.DeadlineExceeded)
+	outcome := executionFailureOutcome(newTaskTerminalCoordinatorForTest(repo, &taskTerminalReplayStub{}, &taskTerminalLoggerStub{}, &taskTerminalOutputStub{}), task, cause, false, true, false)
+	if !errors.Is(outcome.Err, context.DeadlineExceeded) || !outcome.Applied || outcome.Kind != taskruntime.KindUncertain {
+		t.Fatalf("query timeout lost its cause or uncertainty: %+v", outcome)
+	}
+	output := taskForOutput(*task)
+	if task.ProviderRequestID != "original-provider-job" || task.Stage != "submission_unknown" || output.ErrorCode != "submission_uncertain" || !persistedFailureBlocksRetry(task.Error, task.Stage) {
+		t.Fatalf("accepted query timeout became a new submission: %+v", output)
+	}
+	if got := taskTimeoutFailure(model.Task{Type: "canvas_image"}, context.DeadlineExceeded).Error(); got != taskTimeoutMessage("canvas_image") {
+		t.Fatalf("unaccepted timeout boundary changed: %s", got)
+	}
+}
+
 func TestPersistenceFailureOutcomeAppliedFollowsTerminalWrite(t *testing.T) {
 	cause := errors.New("disk full")
 	task := &model.Task{ID: "task-persist", UserID: "user", Status: model.TaskStatusRunning, LeaseOwner: "owner"}

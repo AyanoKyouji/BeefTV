@@ -218,6 +218,7 @@ type AdminChannelModelFetchResult struct {
 
 type FailureInfo struct {
 	StatusCode        int
+	ExplicitRejection bool
 	RetryAfter        time.Duration
 	SlotCode          string
 	ImageThrottle     bool

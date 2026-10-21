@@ -175,7 +175,7 @@ func (w *taskWorkerCoordinator) executeClaimed(session taskruntime.Session) task
 		}
 		var imageRecovery imageRecoveryError
 		if errors.Is(err, context.DeadlineExceeded) && !errors.As(err, &imageRecovery) {
-			err = errors.New(taskTimeoutMessage(task.Type))
+			err = taskTimeoutFailure(*task, err)
 		}
 		return executionFailureOutcome(terminal, task, err, providerSucceeded, providerAccepted, channelSlotFailedBeforeRequest)
 	}
@@ -345,6 +345,15 @@ func newAPIChannel2TaskSyncExpired(task model.Task, err error, now time.Time) bo
 		return true
 	}
 	return !now.Before(task.StartedAt.Add(newAPIChannel2TaskSyncMaxAge))
+}
+
+func taskTimeoutFailure(task model.Task, cause error) error {
+	if task.Type == "canvas_image" && strings.TrimSpace(task.ProviderRequestID) != "" {
+		// A timed-out query does not reject an already accepted image job.
+		// Retain the typed cause and original ID rather than inviting a new POST.
+		return providerSubmissionUnknownError{Cause: providerStatePendingError{TaskID: task.ProviderRequestID, Cause: cause}}
+	}
+	return errors.New(taskTimeoutMessage(task.Type))
 }
 
 func taskTimeoutMessage(taskType string) string {

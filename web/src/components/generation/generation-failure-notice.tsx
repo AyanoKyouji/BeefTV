@@ -14,6 +14,9 @@ type GenerationFailureNoticeProps = {
 };
 
 export function GenerationFailureNotice({ explanation, context, compact, onRetry, retryLabel, onOpenDetails, retryDisabled }: GenerationFailureNoticeProps) {
+    const reason = explanation.uncertain && context?.failureDiagnostics?.source === "upstream_http" && context.failureDiagnostics.httpStatus === 503
+        ? "模型服务暂时不可用，提交结果尚未确认"
+        : explanation.reason;
     const [copyState, setCopyState] = useState<"idle" | "copied" | "failed">("idle");
     const diagnostics = formatGenerationDiagnostics(explanation, context);
     const showRetry = Boolean(onRetry) && !explanation.blockManualRetry && !retryDisabled;
@@ -34,7 +37,7 @@ export function GenerationFailureNotice({ explanation, context, compact, onRetry
     };
     return (
         <div className={`generation-failure-notice${compact ? " is-compact" : ""}`}>
-            <p className="generation-failure-reason">{explanation.reason}</p>
+            <p className="generation-failure-reason">{reason}</p>
             {explanation.action ? <p className="generation-failure-action">{explanation.action}</p> : null}
             <div className="generation-failure-actions">
                 {onOpenDetails ? (

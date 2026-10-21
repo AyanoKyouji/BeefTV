@@ -167,6 +167,7 @@ func routeFailureInfo(err error) modelcatalog.FailureInfo {
 	if errors.As(err, &upstream) {
 		info.StatusCode = upstream.StatusCode
 		info.RetryAfter = upstream.RetryAfter
+		info.ExplicitRejection = generation.SafeRouteRejection(err)
 	}
 	info.ImageThrottle = definiteImageThrottle(err)
 	var preparation generation.RequestPreparationError

@@ -74,6 +74,33 @@ func TestVideoSubmissionExplicitModelRejectionIsNotUncertain(t *testing.T) {
 	}
 }
 
+func TestStructuredParameterRejectionRequiresNoProviderTask(t *testing.T) {
+	for _, tc := range []struct {
+		name     string
+		status   int
+		body     string
+		rejected bool
+	}{
+		{"typed-400", 400, `{"error":{"code":"invalid_request","type":"invalid_request_error","param":"size","message":"Invalid size"}}`, true},
+		{"typed-422", 422, `{"error":{"code":"invalid_parameter","message":"Invalid size"}}`, true},
+		{"bare-400", 400, `Bad request`, false},
+		{"message-only", 400, `{"error":{"message":"Invalid size"}}`, false},
+		{"provider-task", 400, `{"error":{"code":"invalid_request","task_id":"already-created"}}`, false},
+		{"generic-503", 503, `{"error":{"code":"model_temporarily_unavailable"}}`, false},
+		{"validation-code-on-503", 503, `{"error":{"code":"invalid_request"}}`, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := HTTPError{StatusCode: tc.status, Body: tc.body}
+			if got := SafeRouteRejection(err); got != tc.rejected {
+				t.Fatalf("rejection=%v want %v", got, tc.rejected)
+			}
+			if SafeRouteRejection(SubmissionUnknownError{Cause: err}) {
+				t.Fatal("nested rejection must not erase earlier uncertainty")
+			}
+		})
+	}
+}
+
 func TestVideoSubmissionAfterRequestOrRedirectRemainsUncertain(t *testing.T) {
 	t.Setenv("CANVAS_ALLOWED_PRIVATE_UPSTREAM_HOSTS", "127.0.0.1")
 	stalled, closeServer := stalledTLS(t)

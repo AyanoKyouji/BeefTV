@@ -81,6 +81,12 @@ func TestBlockLogicalRouteForFailure(t *testing.T) {
 }
 
 func TestSafeRouteRejectionAndFailureCode(t *testing.T) {
+	if !SafeRouteRejection(FailureInfo{StatusCode: 400, ExplicitRejection: true}) || SafeRouteRejection(FailureInfo{StatusCode: 400}) {
+		t.Fatal("structured rejection proof must remain distinct from a bare HTTP status")
+	}
+	if SafeRouteRejection(FailureInfo{ImageRecovery: true, ExplicitRejection: true}) {
+		t.Fatal("recovery uncertainty overrides a nested rejection")
+	}
 	if !SafeRouteRejection(FailureInfo{StatusCode: 402}) {
 		t.Fatal("HTTP 402 should be a safe rejection")
 	}

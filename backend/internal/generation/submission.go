@@ -66,6 +66,15 @@ func SafeRouteRejection(err error) bool {
 		if upstream.StatusCode >= 400 && fields.Code == "model_not_found" && fields.TaskID == "" {
 			return true
 		}
+		// A typed validation rejection without a task ID is a known failure,
+		// not evidence that a paid task may still be running. Bare 400/422 or
+		// message-only errors do not provide that proof.
+		if fields.TaskID == "" && (upstream.StatusCode == http.StatusBadRequest || upstream.StatusCode == http.StatusUnprocessableEntity) {
+			failure := ClassifyHTTP(upstream.StatusCode, upstream.Status, upstream.Body)
+			if failure.Category == CategoryInvalidParams && failure.FromCode {
+				return true
+			}
+		}
 		switch upstream.StatusCode {
 		case http.StatusUnauthorized, http.StatusPaymentRequired, http.StatusForbidden, http.StatusNotFound, http.StatusTooManyRequests:
 			return true

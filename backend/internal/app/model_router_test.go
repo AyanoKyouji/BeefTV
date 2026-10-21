@@ -1,12 +1,45 @@
 package app
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"testing"
 
+	"infinite-canvas/backend/internal/generation"
 	"infinite-canvas/backend/internal/model"
 )
+
+func TestImageParameterRejectionKeepsRouteAndTaskFailure(t *testing.T) {
+	cause := providerHTTPError{StatusCode: http.StatusBadRequest, Body: `{"error":{"code":"invalid_request","type":"invalid_request_error","param":"size","message":"Invalid size"}}`}
+	s, task := workflowPaidTaskFixture(t)
+	task.Type = "canvas_image"
+	info := routeFailureInfo(cause)
+	if !info.ExplicitRejection || !safeRouteRejection(cause) {
+		t.Fatal("typed rejection lost at app boundary")
+	}
+	attempt, err := s.createDirectTaskAttempt(&task)
+	if err != nil {
+		t.Fatal(err)
+	}
+	s.finishTaskRouteAttempt(attempt, &task, cause)
+	if attempt.DispatchState != "rejected_no_job" {
+		t.Fatalf("attempt=%+v", attempt)
+	}
+	if err := s.terminalCoordinator().handleExecutionFailure(&task, cause, false, false); !errors.Is(err, cause) {
+		t.Fatal(err)
+	}
+	stored, err := s.repo.Task(task.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if stored.Stage == "submission_unknown" || taskForOutput(*stored).ErrorCode != "invalid_params" {
+		t.Fatalf("validation failure lost: %+v", taskForOutput(*stored))
+	}
+	if routeFailureInfo(generation.SubmissionUnknownError{Cause: cause}).ExplicitRejection {
+		t.Fatal("nested HTTP rejection erased prior uncertainty")
+	}
+}
 
 func TestPaymentRequiredIsSafeRouteRejection(t *testing.T) {
 	err := providerHTTPError{StatusCode: http.StatusPaymentRequired, Body: `{"error":{"message":"insufficient balance"}}`}
