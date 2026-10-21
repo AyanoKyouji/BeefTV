@@ -7,7 +7,7 @@ import { NODE_DEFAULT_SIZE } from "@/constant/canvas";
 import { FOLDER_COLLAPSED_HEIGHT, FOLDER_COLLAPSED_WIDTH, FRAME_HEADER_HEIGHT, getFrameChildIds, getFrameChildren, isFrameNode } from "@/lib/canvas/canvas-frame";
 import { alignCanvasNodes, layoutCanvasAuto, layoutCanvasFlow, layoutCanvasNodes, nextCanvasVersionLabel, spreadCanvasNodes, type CanvasAlignmentMode } from "@/lib/canvas/canvas-layout";
 import { applyCanvasConnectionPromptSync } from "@/lib/canvas/canvas-resource-references";
-import { createCanvasNode, isHiddenBatchChild, removeCanvasNodes } from "@/lib/canvas/canvas-project-domain";
+import { createCanvasNode, detachNodeFromStoryboardRow, isHiddenBatchChild, removeCanvasNodes } from "@/lib/canvas/canvas-project-domain";
 import { isolateCopiedDirectorScenes, isolateCopiedNodeMetadata, nextCopiedNodeTitle } from "@/lib/canvas/canvas-node-copy";
 import { canOpenCanvasNodePromptPanel, mediaGeneratorMetadata } from "@/lib/canvas/canvas-node-semantics";
 import { getCanvasNodeCreationDisabledReason } from "@/lib/canvas/canvas-feature-availability";
@@ -449,8 +449,11 @@ export function useCanvasNodeOperations({
     const deleteConnection = useCallback((connectionId: string) => {
         const previousNodes = nodesRef.current;
         const previousConnections = connectionsRef.current;
+        const removed = previousConnections.find((item) => item.id === connectionId);
+        if (!removed) return;
         const nextConnections = previousConnections.filter((item) => item.id !== connectionId);
-        const nextNodes = applyCanvasConnectionPromptSync(previousNodes, previousConnections, previousNodes, nextConnections);
+        const detached = detachNodeFromStoryboardRow(previousNodes, removed, nextConnections);
+        const nextNodes = applyCanvasConnectionPromptSync(previousNodes, previousConnections, detached, nextConnections);
         if (nextNodes !== previousNodes) commitNodes(nextNodes);
         commitConnections(nextConnections);
         setSelectedConnectionId((current) => current === connectionId ? null : current);

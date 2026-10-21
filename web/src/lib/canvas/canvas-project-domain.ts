@@ -292,6 +292,41 @@ export function attachNodeToStoryboardRow(nodes: CanvasNodeData[], connection: P
     });
 }
 
+/** 删除连接时同步解除对应业务引用；媒体和其它镜头的关联保持可用。 */
+export function detachNodeFromStoryboardRow(nodes: CanvasNodeData[], connection: CanvasConnection, remainingConnections: CanvasConnection[]) {
+    const sameLinkRemains = remainingConnections.some((edge) => edge.fromNodeId === connection.fromNodeId && edge.toNodeId === connection.toNodeId
+        && edge.fromHandleId === connection.fromHandleId && edge.toHandleId === connection.toHandleId);
+    if (sameLinkRemains) return nodes;
+    return nodes.map((node) => {
+        const storyboard = node.metadata?.storyboard;
+        if (node.type !== CanvasNodeType.Script || !storyboard) return node;
+        const outgoing = node.id === connection.fromNodeId;
+        const incoming = node.id === connection.toNodeId;
+        if (!outgoing && !incoming) return node;
+        const handle = outgoing ? connection.fromHandleId : connection.toHandleId;
+        const rowId = handle?.startsWith("row:") ? handle.slice(4) : outgoing && connection.relation === "storyboard-output" ? connection.storyboardRowId : undefined;
+        const linkedId = outgoing ? connection.toNodeId : connection.fromNodeId;
+        let changed = false;
+        const rows = storyboard.rows.map((row) => {
+            if (row.id !== rowId) return row;
+            if (outgoing) {
+                const image = row.imageNodeId === linkedId;
+                const video = row.videoNodeId === linkedId;
+                if (!image && !video) return row;
+                changed = true;
+                return { ...row, ...(image ? { imageNodeId: undefined, imageBindingStale: undefined } : {}), ...(video ? { videoNodeId: undefined } : {}) };
+            }
+            const bindings = row.assetBindings;
+            if (!bindings?.some((binding) => binding.nodeId === linkedId)) return row;
+            changed = true;
+            return { ...row, assetBindings: bindings.filter((binding) => binding.nodeId !== linkedId) };
+        });
+        const referenceNodeIds = handle === "storyboard:context" ? storyboard.referenceNodeIds.filter((id) => id !== linkedId) : storyboard.referenceNodeIds;
+        if (referenceNodeIds.length !== storyboard.referenceNodeIds.length) changed = true;
+        return changed ? { ...node, metadata: { ...node.metadata, storyboard: { ...storyboard, rows, referenceNodeIds } } } : node;
+    });
+}
+
 export function storyboardRowFromHandle(nodes: CanvasNodeData[], nodeId: string, handleId?: string) {
     if (!handleId?.startsWith("row:")) return undefined;
     return nodes.find((node) => node.id === nodeId && node.type === CanvasNodeType.Script)?.metadata?.storyboard?.rows.find((row) => `row:${row.id}` === handleId);
