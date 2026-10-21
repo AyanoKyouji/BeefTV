@@ -92,11 +92,15 @@ func (s *Service) terminalCoordinator() *taskTerminalCoordinator {
 	return newTaskTerminalCoordinator(s)
 }
 
-func (c *taskTerminalCoordinator) markPreparationFailure(task *model.Task, stage string, err error, _ bool, _ string) error {
+func (c *taskTerminalCoordinator) markPreparationFailure(task *model.Task, stage string, err error, uncertain bool, _ string) error {
 	captureTaskFailureDiagnostics(task, err, "unknown")
 	c.ensureFailedAttemptLogged(task, err)
 	task.Status = model.TaskStatusFailed
 	task.Stage = stage
+	// 重启后历史请求的裁决也走准备入口，不能丢掉已发出请求的未知边界。
+	if uncertain {
+		task.Stage = "submission_unknown"
+	}
 	task.Error = c.userFacingMessage(err)
 	if terminalErr := c.markTerminalState(task); terminalErr != nil {
 		return errors.Join(err, terminalErr)

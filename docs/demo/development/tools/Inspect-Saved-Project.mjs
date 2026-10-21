@@ -24,8 +24,12 @@ if (!existsSync(dbPath)) {
   console.error('Database not found: ' + dbPath);
   process.exit(2);
 }
+if (comparePath && path.resolve(outPath) === path.resolve(comparePath)) {
+  console.error('--out 与 --compare 必须使用不同文件，避免覆盖基准后自我对照。');
+  process.exit(2);
+}
 
-// 轻量 SQLite 读取（无外部依赖）：使用 Node 内置 sqlite 模块（Node 22+）或回退到原生命令
+// 使用随包 Node 的内置 SQLite，只读打开，不修改项目或数据库。
 let project = null;
 try {
   const { DatabaseSync } = await import('node:sqlite');
@@ -36,7 +40,7 @@ try {
   project = { id: row.id, revision: row.revision, document: JSON.parse(row.payload_json) };
 } catch (e) {
   console.error('Failed to read SQLite: ' + e.message);
-  console.error('请使用 Node 22+ 或改用支持 better-sqlite3 的运行时');
+  console.error('请使用带 node:sqlite 的 Node 运行时（优先使用项目随包 Node）。');
   process.exit(1);
 }
 
@@ -50,16 +54,7 @@ const nodes = (project.document.nodes || []).map((n) => ({
     content: n.metadata?.composerContent ?? n.metadata?.prompt ?? n.metadata?.content ?? '',
   } : {}),
   ...(n.type === 'script' ? {
-    storyboard: (n.metadata?.storyboard?.rows || []).map((r) => ({
-      id: r.id,
-      shotNumber: r.shotNumber,
-      plotDescription: r.plotDescription,
-      dialogue: r.dialogue,
-      videoPrompt: r.videoPrompt,
-      imageGenerationPrompt: r.imageGenerationPrompt,
-      imageNodeId: r.imageNodeId,
-      imageBindingStale: r.imageBindingStale,
-    })),
+    storyboard: n.metadata?.storyboard?.rows || [],
   } : {}),
   ...(n.type === 'image' ? {
     image: {
@@ -71,15 +66,23 @@ const nodes = (project.document.nodes || []).map((n) => ({
     },
   } : {}),
 }));
-const connections = (project.document.connections || []).map((c) => ({
-  id: c.id, fromNodeId: c.fromNodeId, toNodeId: c.toNodeId,
-  fromHandleId: c.fromHandleId, relation: c.relation, storyboardRowId: c.storyboardRowId,
-}));
+const connections = project.document.connections || [];
+
+function canonicalize(value) {
+  if (Array.isArray(value)) return value.map(canonicalize);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.keys(value).sort().map(key => [key, canonicalize(value[key])]));
+  }
+  return value;
+}
 
 const snapshot = {
+  schemaVersion: 2,
   title,
   canvasId: project.id,
   revision: project.revision,
+  // 摘要覆盖整个持久化文档，防止投影之外的字段丢失仍被报为 PASS。
+  documentSha256: createHash('sha256').update(JSON.stringify(canonicalize(project.document))).digest('hex'),
   nodes,
   connections,
   capturedAt: new Date().toISOString(),
@@ -93,7 +96,7 @@ if (comparePath) {
   const normalize = (s) => {
     const cloned = JSON.parse(JSON.stringify(s));
     delete cloned.capturedAt;
-    return JSON.stringify(cloned, null, 2);
+    return JSON.stringify(canonicalize(cloned));
   };
   const same = normalize(prev) === normalize(snapshot);
   const result = { compared: true, pass: same, prevRevision: prev.revision, currRevision: snapshot.revision };
@@ -101,8 +104,11 @@ if (comparePath) {
     console.log(`PASS readonly saved snapshot; compared=true; revision=${snapshot.revision}; nodes=${nodes.length}`);
   } else {
     console.error('FAIL: snapshots differ');
+    if (prev.schemaVersion !== snapshot.schemaVersion || !prev.documentSha256) {
+      console.error('  旧版快照没有全文档摘要，请用当前采集器重新采集 before/after；不能据此宣称旧记录已完整复验。');
+    }
     // 输出 diff 简要信息
-    for (const key of ['canvasId', 'revision']) {
+    for (const key of ['canvasId', 'revision', 'documentSha256']) {
       if (prev[key] !== snapshot[key]) console.error(`  ${key}: ${prev[key]} → ${snapshot[key]}`);
     }
     const prevNodes = new Map(prev.nodes.map((n) => [n.id, n]));
@@ -122,5 +128,6 @@ if (comparePath) {
     for (const [id, before] of prevNodes) console.error(`  node ${id} (${before.type}) 缺失`);
     process.exitCode = 1;
   }
-  await writeFile(outPath.replace(/\.json$/, '-compare.json'), JSON.stringify(result, null, 2));
+  const resultPath = outPath.endsWith('.json') ? outPath.replace(/\.json$/, '-compare.json') : outPath + '-compare.json';
+  await writeFile(resultPath, JSON.stringify(result, null, 2));
 }

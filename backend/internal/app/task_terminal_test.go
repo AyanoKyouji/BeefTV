@@ -98,6 +98,35 @@ func TestTaskTerminalConflictDoesNotFinalize(t *testing.T) {
 	}
 }
 
+func TestTaskPreparationFailureKeepsKnownSubmissionBoundary(t *testing.T) {
+	for _, uncertain := range []bool{false, true} {
+		name := "not_sent"
+		var cause error = errors.New("model configuration missing")
+		wantStage := "路由准备失败"
+		if uncertain {
+			name = "prior_dispatch_unknown"
+			cause = routeDispatchUncertainError{Message: "上一次提交结果不明确"}
+			wantStage = "submission_unknown"
+		}
+		t.Run(name, func(t *testing.T) {
+			task := &model.Task{ID: "task", Status: model.TaskStatusRunning}
+			coordinator := newTaskTerminalCoordinatorForTest(&taskTerminalRepositoryStub{task: task}, &taskTerminalReplayStub{}, &taskTerminalLoggerStub{}, &taskTerminalOutputStub{})
+			if err := coordinator.markPreparationFailure(task, "路由准备失败", cause, uncertain, "路由准备失败，上游请求未发出"); !errors.Is(err, cause) {
+				t.Fatalf("original error lost: %v", err)
+			}
+			if task.Status != model.TaskStatusFailed || task.Stage != wantStage {
+				t.Fatalf("wrong persisted boundary: status=%s stage=%s", task.Status, task.Stage)
+			}
+			if uncertain && !persistedFailureBlocksRetry(task.Error, task.Stage) {
+				t.Fatal("an unknown prior dispatch became retryable")
+			}
+			if (taskForOutput(*task).ErrorCode == "submission_uncertain") != uncertain {
+				t.Fatal("public error code does not match the known submission boundary")
+			}
+		})
+	}
+}
+
 func TestTaskTerminalPreservesImageAndVideoSubmissionUncertainty(t *testing.T) {
 	for name, cause := range map[string]error{
 		"image": imageRecoveryError{errors.New("receipt lost")},

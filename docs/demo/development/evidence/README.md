@@ -105,3 +105,7 @@ DEV-005 发送前提交屏障，结果为 Fixed（Mac），起始基线 `a018bc4
 DEV-012 双入口交付一致性，起始提交 `2d0c81b`，结果 Verified（Mac，受控图片回放 + 真实 DeepSeek 提案）。三个场景（手动有目标 / Agent 有目标 / 手动无目标）在共享交付层产出一致结果，独立 Task / Asset / storageKey，文件 SHA-256 均等于 DEV-009 真实字节；冷启动后完整恢复。图片为本机 `openai-image` 回放（3 次 POST），文本为 1 次真实 DeepSeek dispatch。
 
 本机档案含 `dev012-shared.mjs`、`dev012-manual-target.mjs`、`dev012-agent-target.mjs`、`dev012-manual-standalone.mjs`、`dev012-cold-restart.mjs`，各场景 `initial / running / delivered / final / task / result` JSON 与截图、fixture 请求、`cold-restart-result.json`。数据库、模型凭据、原始日志和媒体文件保留本机，不发布。详见[DEV-012 报告](../reports/DEV-012_20261021-122500-DEV-012.md)。
+
+## 20261021-144414-DEV-012-017-RETEST
+
+独立复测基线 `e6d39ee`。原材料位于本机 Git 忽略目录 `.local/retest-dev012-017-20261021-144414/`：`runtime.py`、`browser.mjs`、`uncertainty.mjs`、`final-audit.mjs`；`go-tests*.jsonl`、`go-app-targeted.jsonl`、`go-fixed-final.jsonl`、`go-adjacent-final.jsonl` 及各 summary；`web-tests.log`、`web-build.log`、`collector-tests.log`；`collector-repro.json`、`uncertain-before-fix.log`、所有 `browser/uncertainty/final-audit-failure-*`；最终 `browser-result.json`、`uncertainty-result.json`、`offline-edit-before/after.json` 与对照、截图、进程日志、egress 探针、`final-manifest.json` 及 `cleanup-final.json`。修复前问题与控制器失败未删除。隔离数据、配置及媒体不提交，详细事实见[复测报告](../reports/DEV-012-017_Retest_20261021-144414.md)。

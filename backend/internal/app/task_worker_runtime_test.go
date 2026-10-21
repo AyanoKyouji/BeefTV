@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"infinite-canvas/backend/internal/generation"
 	"infinite-canvas/backend/internal/model"
 	"infinite-canvas/backend/internal/platform"
 	"infinite-canvas/backend/internal/repository"
@@ -109,6 +110,15 @@ func TestUnknownAcceptedRouteIsNotResubmittedAfterLeaseExpiry(t *testing.T) {
 	}
 	if stored.Status != model.TaskStatusFailed {
 		t.Fatalf("status=%s", stored.Status)
+	}
+	if stored.Stage != "submission_unknown" || !persistedFailureBlocksRetry(stored.Error, stored.Stage) {
+		t.Fatalf("restart lost submission uncertainty: status=%s stage=%s", stored.Status, stored.Stage)
+	}
+	if output := taskForOutput(*stored); output.ErrorCode != string(generation.CategorySubmissionUncertain) {
+		t.Fatalf("public task lost submission uncertainty: code=%s stage=%s", output.ErrorCode, output.Stage)
+	}
+	if _, err := s.RetryTask(task.UserID, task.ID); err == nil {
+		t.Fatal("unknown accepted task allowed a manual retry")
 	}
 
 	restarted := &Service{repo: repository.New(db), dataDir: s.dataDir, mode: serviceModeLocal, coordinator: platform.NewLocalCoordinator(), workerID: "restarted-worker"}
