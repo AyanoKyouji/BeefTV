@@ -606,6 +606,28 @@ export function defaultModelCapabilityConfig(protocol?: ModelProtocol, model = "
         video.resolutions = ["1080p"];
         video.defaultResolution = "1080p";
     }
+    if (protocol === "predictions-h3-video") {
+        video.references.maxImages = 9;
+        video.references.maxVideos = 3;
+        video.references.maxAudios = 3;
+        video.references.maxImageBytes = video.references.maxVideoBytes = video.references.maxAudioBytes = 20 * 1024 * 1024;
+        video.references.promptMaxChars = 7000;
+        video.duration = { selection: "range", min: 5, max: 15, step: 1, default: 5 };
+        video.ratios = ["adaptive", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"];
+        const max = String(model || "").toLowerCase().includes("-max");
+        const turbo = String(model || "").toLowerCase().endsWith("-turbo");
+        video.resolutions = max ? ["480P", "768P", "1080P"] : ["768P", "2K", "4K"];
+        video.defaultResolution = "768P";
+        video.generateAudio = { supported: false, default: false };
+        video.watermark = { supported: false, default: false };
+        video.operations = ["text_to_video", "image_to_video", "reference_to_video"];
+        if (turbo) {
+            video.ratios = video.ratios.filter((ratio) => ratio !== "adaptive");
+            video.references.maxImages = 2;
+            video.references.maxVideos = video.references.maxAudios = 0;
+            video.operations = ["text_to_video", "image_to_video"];
+        }
+    }
     if (protocol === "minimax-video") {
         video.references.maxImages = 9;
         video.references.maxImageBytes = 30 * 1024 * 1024;

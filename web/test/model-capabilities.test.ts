@@ -7,6 +7,21 @@ import { modelCompatibilityError } from "../src/lib/model-selection.ts";
 import type { AiConfig } from "../src/stores/use-config-store.ts";
 import { seedanceTaskOptions, seedanceOmniTaskType } from "../src/lib/seedance-task-constraints.ts";
 
+test("Predictions H3 exposes the relay schema limits without MiniMax native defaults", () => {
+    const video = defaultModelCapabilityConfig("predictions-h3-video", "minimax-h3").video!;
+    assert.equal(videoDurationAllowed(video, 4), false);
+    assert.equal(videoDurationAllowed(video, 5), true);
+    assert.deepEqual(video.resolutions, ["768P", "2K", "4K"]);
+    assert.equal(video.references.maxImageBytes, 20 * 1024 * 1024);
+    assert.equal(video.references.promptMaxChars, 7000);
+    assert.equal(video.watermark.supported, false);
+    const turbo = defaultModelCapabilityConfig("predictions-h3-video", "minimax-h3-max-turbo").video!;
+    assert.deepEqual(turbo.resolutions, ["480P", "768P", "1080P"]);
+    assert.equal(turbo.references.maxImages, 2);
+    assert.equal(turbo.references.maxVideos, 0);
+    assert.equal(turbo.operations.includes("reference_to_video"), false);
+});
+
 test("Dreamina native defaults expose editing and valid duration choices without expanding saved profiles", () => {
     const model = "dreamina-seedance-2-5-260628";
     const profile = defaultModelCapabilityConfig("volcengine-ark-video", model).video!;

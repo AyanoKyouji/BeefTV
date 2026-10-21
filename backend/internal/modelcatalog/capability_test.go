@@ -24,6 +24,21 @@ func TestDefaultPixelPresetsSatisfyImageGenerationConstraints(t *testing.T) {
 	}
 }
 
+func TestPredictionsH3CapabilityMatchesRelaySchema(t *testing.T) {
+	for _, model := range []string{"minimax-h3", "minimax-h3-max", "minimax-h3-max-turbo"} {
+		v := DefaultModelCapabilityConfigForModel("predictions-h3-video", model).Video
+		if v.Duration.Min != 5 || v.Duration.Max != 15 || v.References.MaxImageBytes != 20<<20 || v.References.PromptMaxChars != 7000 || v.Watermark.Supported {
+			t.Fatalf("wrong schema for %s: %#v", model, v)
+		}
+		if model == "minimax-h3" && strings.Join(v.Resolutions, ",") != "768P,2K,4K" {
+			t.Fatal(v.Resolutions)
+		}
+		if strings.HasSuffix(model, "turbo") && (v.References.MaxVideos != 0 || v.References.MaxImages != 2) {
+			t.Fatal(v.References)
+		}
+	}
+}
+
 func TestGPTImageQualityTiersValidateAll39Selections(t *testing.T) {
 	count := 0
 	legacyProfile := DefaultImageCapabilityConfig("openai-image", "gpt-image-2")

@@ -37,6 +37,7 @@ const BUILTIN_PROTOCOL_CAPABILITIES: Record<ModelProtocol, ProtocolCapability> =
     "gemini-veo": "video",
     "novita-video": "video",
     "minimax-video": "video",
+    "predictions-h3-video": "video",
     "agnes-video": "video",
     "full-video": "video",
     "openai-audio": "audio",

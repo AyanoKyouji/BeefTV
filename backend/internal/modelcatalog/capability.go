@@ -204,6 +204,23 @@ func DefaultModelCapabilityConfigForModel(protocol string, modelName string) *Mo
 		video.Ratios = []string{"16:9", "9:16", "1:1"}
 		video.Resolutions = []string{"1080p"}
 		video.DefaultResolution = "1080p"
+	case "predictions-h3-video":
+		video.Operations = []string{"text_to_video", "image_to_video", "reference_to_video"}
+		video.References.MaxImages, video.References.MaxVideos, video.References.MaxAudios = 9, 3, 3
+		video.References.MaxImageBytes, video.References.MaxVideoBytes, video.References.MaxAudioBytes = 20<<20, 20<<20, 20<<20
+		video.References.PromptMaxChars = 7000
+		video.Duration = VideoDurationConfig{Selection: "range", Min: 5, Max: 15, Step: 1, Default: 5}
+		video.Ratios = []string{"adaptive", "21:9", "16:9", "4:3", "1:1", "3:4", "9:16"}
+		video.Resolutions, video.DefaultResolution = []string{"768P", "2K", "4K"}, "768P"
+		if strings.Contains(strings.ToLower(modelName), "-max") {
+			video.Resolutions = []string{"480P", "768P", "1080P"}
+		}
+		if strings.HasSuffix(strings.ToLower(modelName), "-turbo") {
+			video.Ratios = []string{"21:9", "16:9", "4:3", "1:1", "3:4", "9:16"}
+			video.Operations = []string{"text_to_video", "image_to_video"}
+			video.References.MaxImages, video.References.MaxVideos, video.References.MaxAudios = 2, 0, 0
+		}
+		video.GenerateAudio, video.Watermark = VideoBooleanConfig{}, VideoBooleanConfig{}
 	case model.ChannelInterfaceMiniMaxVideo:
 		video.Operations = append(video.Operations, "reference_to_video")
 		video.References.MaxImages = 9

@@ -1112,6 +1112,54 @@ for (const [id, name, capability, createPath, pollPath, resultPath] of [
   });
 }
 
+const predictionsTurbo = eq(ref("request.model"), "minimax-h3-max-turbo");
+const predictionsFirstFrame = coalesce(firstMediaFieldWithRoles("request.images", ["first_frame"], "value"), conditional(predictionsTurbo, first(map(sorted(ref("request.images")), "media", ref("media.value")))));
+const predictionsLastFrame = coalesce(firstMediaFieldWithRoles("request.images", ["last_frame"], "value"), conditional(predictionsTurbo, at(map(sorted(ref("request.images")), "media", ref("media.value")), 1)));
+add({
+  id: "predictions-h3-video", providerId: "predictions-h3-video", name: "Predictions MiniMax H3", vendor: "Predictions Relay", capability: "video",
+  baseUrl: "", auth: bearer, params: videoParams, requiresPublicMediaUrls: true,
+  validations: [
+    { assert: { $in: [ref("request.model"), ["minimax-h3", "minimax-h3-max", "minimax-h3-max-turbo"]] }, message: "此协议仅适用于已核实的 MiniMax H3 模型" },
+    { assert: { $in: [coalesce(ref("request.resolution"), "768P"), conditional(eq(ref("request.model"), "minimax-h3"), ["768P", "2K", "4K"], ["480P", "768P", "1080P"])] }, message: "分辨率不在当前模型的中转 schema 中" },
+    { assert: conditional(predictionsTurbo, and(lte(len(ref("request.images")), 2), eq(len(ref("request.videos")), 0), eq(len(ref("request.audios")), 0)), true), message: "H3 Max Turbo 仅支持首尾帧，不能使用参考视频或音频" },
+    { assert: and(gte(toInt(coalesce(ref("request.duration"), 5)), 5), lte(toInt(coalesce(ref("request.duration"), 5)), 15)), message: "MiniMax H3 时长必须为 5～15 秒" },
+    { assert: lte(len(ref("request.prompt")), 7000), message: "提示词最多 7000 字符" },
+    { assert: lte(len(ref("request.images")), 9), message: "最多 9 张参考图片" },
+    { assert: lte(len(ref("request.videos")), 3), message: "最多 3 个参考视频" },
+    { assert: lte(len(ref("request.audios")), 3), message: "最多 3 个参考音频" },
+    { assert: lte({ $add: [len(ref("request.images")), len(ref("request.videos")), len(ref("request.audios"))] }, 12), message: "参考素材合计最多 12 个" },
+    { assert: { $not: and(gt(len(mediaWithRoles("request.images", ["first_frame", "last_frame"])), 0), gt({ $add: [len(mediaWithRoles("request.images", ["reference_image", ""])), len(ref("request.videos")), len(ref("request.audios"))] }, 0)) }, message: "首尾帧不能与参考素材混用" },
+    { assert: { $or: [eq(len(mediaWithRoles("request.images", ["last_frame"])), 0), gt(len(mediaWithRoles("request.images", ["first_frame"])), 0)] }, message: "尾帧需要同时提供首帧" },
+    { assert: { $or: [eq(len(ref("request.audios")), 0), gt({ $add: [len(ref("request.images")), len(ref("request.videos"))] }, 0)] }, message: "参考音频需要同时提供图片或视频" },
+  ],
+  notes: "用于 /api/v1/predictions 的 MiniMax H3 包装协议。宿主先将本地参考素材上传到同渠道 /api/v1/files（每文件最多 20 MiB），再提交 URL；上传失败不会创建视频任务。首尾帧与参考素材不能混用。只发送 schema 声明的字段，不发送 watermark/generate_audio。提交携带稳定 Idempotency-Key，查询不重复创建。",
+  create: {
+    ...jsonCreate("/api/v1/predictions", {
+      model: ref("request.model"),
+      input: {
+        prompt: ref("request.prompt"),
+        duration: toInt(coalesce(ref("request.duration"), ref("request.extra.videoSeconds"), 5)),
+        resolution: coalesce(ref("request.resolution"), "768P"),
+        aspect_ratio: omit(conditional(eq(predictionsFirstFrame, null), coalesce(ref("request.aspectRatio"), "16:9"))),
+        image_url: omit(predictionsFirstFrame),
+        end_image_url: omit(predictionsLastFrame),
+        reference_image_urls: omit(conditional(predictionsTurbo, null, map(mediaWithRoles("request.images", ["reference_image", ""]), "media", ref("media.value")))),
+        reference_video_urls: omit(map(ref("request.videos"), "media", ref("media.value"))),
+        reference_audio_urls: omit(map(ref("request.audios"), "media", ref("media.value"))),
+      },
+    }),
+    originPath: true,
+    headers: { "Idempotency-Key": ref("request.extra.idempotencyKey") },
+  },
+  poll: { method: "GET", path: "/api/v1/predictions/{{taskId}}", originPath: true },
+  response: asyncResponse("video", {
+    taskId: coalesce(ref("response.data.task_id"), ref("taskId")),
+    status: coalesce(ref("response.data.status"), "pending"),
+    videos: ref("response.data.outputs"),
+    errorPaths: ["code"], messagePaths: ["data.error", "msg"],
+  }),
+});
+
 function manifestFor(spec) {
   return {
     apiVersion: "beeftv.plugin/v2",
