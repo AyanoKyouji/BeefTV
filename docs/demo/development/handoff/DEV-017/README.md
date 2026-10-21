@@ -16,7 +16,7 @@ git checkout f84d5a1
 git status --short   # 期望 clean
 ```
 
-如需离线包，Mac 侧已生成 `BeefTV-DEV017-source-f84d5a1.zip`（约 73 MiB）：
+如需离线包，Mac 侧已生成并放到仓库内 `.local/handoff/` 目录（不提交 Git）：
 
 ```
 SHA-256: 3f979fe415dbbdb06e3b7afc7bea75956d8912e5ac7c9f1a7e6abb0b8f37c709
