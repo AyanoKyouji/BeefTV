@@ -9,6 +9,8 @@ test("stopping an unknown local wait preserves its operation and current draft w
     expect(stopped!.metadata).toMatchObject({status: "error", composerContent: "edited", taskClientOperationId: "original-operation", generationSubmissionState: "unknown"});
     expect(stopped!.metadata?.taskStatus).toBeUndefined();
     expect(stopped!.metadata?.errorDetails).toContain("已停止本地等待");
+    const submitting = {...node, metadata: {...node.metadata, generationSubmissionState: "submitting" as const}};
+    expect(stopUnconfirmedCanvasGeneration([submitting], "target", "original-operation")[0]!.metadata).toMatchObject({status: "error", generationSubmissionState: "unknown", taskClientOperationId: "original-operation"});
     const rebound = {...node, metadata: {...node.metadata, taskId: "accepted-task"}};
     expect(stopUnconfirmedCanvasGeneration([rebound], "target", "original-operation")[0]).toBe(rebound);
     expect(stopUnconfirmedCanvasGeneration([node], "target", "obsolete-operation")[0]).toBe(node);
