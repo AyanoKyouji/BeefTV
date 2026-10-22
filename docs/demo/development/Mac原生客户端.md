@@ -55,3 +55,5 @@ GOTOOLCHAIN=local BEEFTV_WAILS_PLATFORM=darwin/arm64 \
 同日进一步支持取消后在同一节点直接重新生成。修改提示词后点击生成即可；未知旧请求保存到“查看上次请求”，不再占用当前节点。原请求仍可能计费，旧结果不会覆盖新的请求。详见[同节点重新生成记录](reports/GENERATION-RESUBMIT_20261022.md)。
 
 同日内置 Agent 改为按明确指令直接生成，按“首图 → 分镜 → 分镜图 → 视频”等依赖等待真实产物后继续，无需逐次点击确认；普通移动节点不再使生成方案失效。历史方案仅保留记录，在原对话发送“按刚才的完整要求继续”即可使用新流程。详见[直接生成记录](reports/AGENT-DIRECT-GENERATION_20261022.md)。
+
+同日修复该中转 FLUX 带参考图走错接口的问题，当前 `flux-3-image` 使用 Predictions FLUX Image 协议；真实分镜图生成、回填原节点及 Agent 静态图片查看通过。已明确失败的任务不再因节点残留“生成中”而阻止新请求。当前原生产品提交为 `63ab298`，完整验证范围与继续提示词见[修复记录](reports/AGENT-FLUX-REFERENCE_20261022.md)。
