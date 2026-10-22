@@ -1,5 +1,7 @@
 # 本地运行证据索引
 
+2026-10-22 YUNTV 品牌更新：`.local/yuntv-brand-20261022/` 保存更名前后三项目全文、9 条任务与模型配置私有对照、专项与构建日志、安装验证脚本及 `native-verification.json`。原生产品提交 `0042b83`，唯一正式应用 `/Applications/YUNTV.app`；首页深浅色、现有画布和 Agent 标题实际查看通过，数据比较一致，零新模型调用。Windows/Linux 未原生运行，见[报告](../reports/YUNTV-BRAND_20261022.md)。
+
 2026-10-22 FLUX 参考图修复：忽略目录 `.local/agent-flux-reference-20261022/` 保存失败任务、平台模型 schema、配置修改前后、专项测试与构建日志、正式 API 脚本、真实任务及图片预览。产品基线 `63ab298`，只给当前中转的 `flux-3-image` 更换协议；真实新增一张分镜图，1360×768，`succeeded / READY`，回填原节点；其余草稿、分镜表与连线保留。实际 DeepSeek Agent 只读图片检查通过，未生成剩余分镜和视频。见[修复报告](../reports/AGENT-FLUX-REFERENCE_20261022.md)。
 
 2026-10-22 Agent 直接生成：`.local/agent-direct-20261022/` 保存接纳/权限专项、宿主 47 项（含官方 Durable 连续工具流程）、预算 13 项、前端 73 项、类型检查、原生构建/启动和更新前后私有画布快照。产品基线 `749195f`，原生历史卡已移除确认按钮，当前六节点画布全文保留，任务仍为 3 个且运行中为 0，未调用真实收费模型。早期试跑日志另保留于 `.local/agent-direct-*.log`，其中扩大范围时的缺少 ffmpeg 环境问题不算完整媒体验收通过。见[直接生成报告](../reports/AGENT-DIRECT-GENERATION_20261022.md)。

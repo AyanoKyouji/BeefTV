@@ -1,5 +1,7 @@
 # YUNTV Mac 原生客户端
 
+当前品牌为 YUNTV，正式产品构建 `0042b83`。窗口、Logo、应用图标和随包 CLI 已同步更名，三个项目与模型配置对照保留，见[品牌与安装验证](reports/YUNTV-BRAND_20261022.md)。数据根目录仍沿用原 `BeefTV` 目录；历史说明中的名称保留其来源。
+
 本机应用固定为 `/Applications/YUNTV.app`，Apple Silicon（arm64）。在 Finder 的“应用程序”中双击 YUNTV 即可打开，无需先执行 `make dev`，也无需另开 Go/Vite/Node 服务。Node Agent、官方协议插件和本地媒体运行时随应用提供。
 
 ## 工作区与模型
