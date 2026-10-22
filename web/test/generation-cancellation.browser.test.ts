@@ -116,7 +116,7 @@ test("closing the page does not cancel a durable generation", async () => {
     } finally {await close();}
 }, 15000);
 
-test("lost receipt plus unavailable lookup retains uncertainty without resubmission", async () => {
+test("after an unconfirmed cancellation the same node submits a fresh request and keeps the old receipt in history", async () => {
     const {page, state, close} = await open();
     let release!: () => void; const gate = new Promise<void>(r => {release = r;}); let held = false;
     await page.route("**/api/tasks", async route => {
@@ -129,7 +129,37 @@ test("lost receipt plus unavailable lookup retains uncertainty without resubmiss
         await page.getByRole("button", {name: "取消生成", exact: true}).click(); release();
         await page.waitForFunction(() => (window as any).__customer.settled);
         const m = await page.evaluate(() => (window as any).__customer.nodes.find((n: any) => n.id === "target").metadata);
-        expect(m.generationSubmissionState).toBe("unknown"); expect(m.taskClientOperationId).toBe(state.task.clientOperationId);
+        expect(m.generationSubmissionState).toBeUndefined(); expect(m.taskClientOperationId).toBeUndefined();
+        expect(m.stoppedGenerationSubmissions[0].operationId).toBe(state.task.clientOperationId);
         expect(state.posts).toHaveLength(1); expect(state.cancels).toHaveLength(0); expect(state.task.status).toBe("running");
+        const oldOperation = state.task.clientOperationId;
+        await page.unroute("**/api/tasks"); await page.unroute("**/api/tasks/by-operation/**");
+        await page.reload();
+        await page.getByRole("button", {name: "生成", exact: true}).waitFor();
+        expect(state.posts).toHaveLength(1);
+        expect(await page.getByRole("button", {name: "生成", exact: true}).isEnabled()).toBe(true);
+        await page.getByRole("textbox", {name: "视频提示词", exact: true}).fill("新的提示词，重新生成");
+        await page.getByRole("button", {name: "生成", exact: true}).click();
+        await until(() => state.posts.length === 2);
+        expect(state.posts[1].input.metadata.nodeId).toBe("target");
+        expect(state.posts[1].input.metadata.clientOperationId).not.toBe(oldOperation);
+        expect(state.posts[1].prompt).toContain("新的提示词");
+        expect(state.project.nodes.find(n => n.id === "target")!.metadata?.stoppedGenerationSubmissions?.[0]?.operationId).toBe(oldOperation);
     } finally {release(); await close();}
+}, 15000);
+
+test("after confirmed cancellation the same node immediately generates again with unchanged prompt", async () => {
+    const {page, state, close} = await open();
+    try {
+        await page.getByRole("button", {name: "生成", exact: true}).click();
+        await page.waitForFunction(() => (window as any).__customer.nodes.find((n: any) => n.id === "target").metadata.taskId);
+        await page.getByRole("button", {name: "取消生成", exact: true}).click();
+        await page.waitForFunction(() => (window as any).__customer.settled);
+        const oldOperation = state.tasks[0].clientOperationId;
+        await page.getByRole("button", {name: "生成", exact: true}).click();
+        await until(() => state.posts.length === 2);
+        expect(state.tasks).toHaveLength(2); expect(state.tasks[0].status).toBe("cancelled");
+        expect(state.tasks[1].clientOperationId).not.toBe(oldOperation);
+        expect(state.posts[1].input.metadata.nodeId).toBe("target");
+    } finally {await close();}
 }, 15000);

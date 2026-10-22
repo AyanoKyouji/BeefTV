@@ -18,6 +18,7 @@ import { canvasGenerationTaskNodes, canvasTaskFailureMetadata } from "./canvas-g
 import { runGenerationConsumer } from "@/services/generation-consumer-lifecycle";
 import { consumeCanvasGenerationContinuation } from "./use-canvas-operation-history";
 import { USER_GENERATION_CANCEL } from "@/services/api/generation-cancellation";
+import { stoppedGenerationTask } from "@/lib/canvas/canvas-generation-attempts";
 
 type CanvasGenerationRequest = {
     targetNodeId: string;
@@ -260,16 +261,18 @@ export function useCanvasGeneration({ projectId, domainProjectId, projectLoaded,
 
     const applyGenerationTaskResult = useCallback(
         async (nodeId: string, task: GenerationTask) => {
+            if (stoppedGenerationTask(nodesRef.current.find((node) => node.id === nodeId), task)) return;
             const capturedScope = captureUserScope();
             const capturedCanvasId = projectId;
             const controller = consumerControllerRef.current;
-            const isCurrentCanvas = () => projectIdRef.current === capturedCanvasId && !controller.signal.aborted && userScopeMatches(capturedScope);
+            const isCurrentCanvas = () => projectIdRef.current === capturedCanvasId && !controller.signal.aborted && userScopeMatches(capturedScope) && !stoppedGenerationTask(nodesRef.current.find((node) => node.id === nodeId), task);
             if (!isCurrentCanvas()) throw new DOMException("The canvas operation was abandoned", "AbortError");
             if (task.status !== "succeeded") {
+                if (task.status === "cancelled") return;
                 if (generationTaskCanReloadResource(task) && isCurrentCanvas()) {
                     setNodes((current) => current.map((node) => (node.id === nodeId ? { ...node, metadata: { ...node.metadata, resourceReloadAvailable: true } } : node)));
                 }
-                throw new Error(task.error || (task.status === "cancelled" ? "任务已取消" : "任务失败"));
+                throw new Error(task.error || "任务失败");
             }
             try {
                 await bindBackendCanvasGenerationResult({
@@ -359,6 +362,7 @@ export function useCanvasGeneration({ projectId, domainProjectId, projectLoaded,
         async (startedProjectId: string, signal: AbortSignal, isCurrentProject: () => boolean) => {
             if (!isCurrentProject()) return;
             const recoveryNodes = nodesRef.current.filter((node) => {
+                if (node.metadata?.taskStatus === "cancelled") return false;
                 if (node.metadata?.generationErrorCode === "result_target_unavailable") return false;
                 if (isDepthCaptureResultNode(node)) return false;
                 const pendingAgentContinuation = node.metadata?.agentGenerationContinuation?.status === "pending";

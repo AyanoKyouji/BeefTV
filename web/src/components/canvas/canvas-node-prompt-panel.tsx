@@ -42,6 +42,7 @@ type CanvasNodePromptPanelProps = {
     isRunning: boolean;
     isCancelling?: boolean;
     onCancelGeneration?: (node: CanvasNodeData) => void;
+    onQueryStoppedGeneration?: (operationId: string) => void;
     onPromptChange: (nodeId: string, prompt: string) => void;
     onConfigChange: (nodeId: string, patch: Partial<CanvasNodeMetadata>) => void;
     onGenerate: (nodeId: string, mode: CanvasNodeGenerationMode, prompt: string) => void;
@@ -73,7 +74,7 @@ const PROMPT_EDITOR_MODAL_WIDTH = "min(1200px, 92vw)";
 const PROMPT_EDITOR_MODAL_DEFAULT_WIDTH = 1200;
 const PROMPT_EDITOR_MODAL_DEFAULT_HEIGHT = 420;
 
-export function CanvasNodePromptPanel({ projectId, node, isRunning, isCancelling = false, onCancelGeneration, onPromptChange, onConfigChange, onGenerate, mentionReferences = [], onAddReference, onRemoveReference, onReorderReferences, onReplaceReference, onReplaceReferenceFiles, onClose, onNodeMouseDown, onImageSettingsOpenChange, workspaceMode = "professional" }: CanvasNodePromptPanelProps) {
+export function CanvasNodePromptPanel({ projectId, node, isRunning, isCancelling = false, onCancelGeneration, onQueryStoppedGeneration, onPromptChange, onConfigChange, onGenerate, mentionReferences = [], onAddReference, onRemoveReference, onReorderReferences, onReplaceReference, onReplaceReferenceFiles, onClose, onNodeMouseDown, onImageSettingsOpenChange, workspaceMode = "professional" }: CanvasNodePromptPanelProps) {
     const globalConfig = useEffectiveConfig();
     const themeName = useActiveTheme();
     const theme = canvasThemes[themeName];
@@ -574,6 +575,12 @@ export function CanvasNodePromptPanel({ projectId, node, isRunning, isCancelling
                 </div>
             ) : null}
 
+            {node.metadata?.stoppedGenerationSubmissions?.length ? (
+                <div className="flex items-center justify-between gap-2 px-2 py-1 text-[var(--fs-tiny)]" style={{color: theme.node.muted}}>
+                    <span>上次请求已停止等待，可重新生成；上游仍可能计费。</span>
+                    {onQueryStoppedGeneration ? <Popover trigger="click" content={<div className="flex flex-col gap-1">{node.metadata.stoppedGenerationSubmissions.map((attempt, index) => <Button key={attempt.operationId} type="text" size="small" onClick={() => onQueryStoppedGeneration(attempt.operationId)}>查询已停止的请求 {index + 1}</Button>)}</div>}><Button type="text" size="small">查看上次请求</Button></Popover> : null}
+                </div>
+            ) : null}
             {renderComposerControls(false)}
 
             <Modal

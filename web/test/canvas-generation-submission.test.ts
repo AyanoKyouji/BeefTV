@@ -3,14 +3,17 @@ import { describe, expect, test } from "bun:test";
 import { canvasGenerationPromptMetadata, canvasGenerationRequestFingerprint, runCanvasGenerationSubmissionOnce, stopUnconfirmedCanvasGeneration } from "@/lib/canvas/canvas-generation-submission";
 import { CanvasNodeType, type CanvasNodeData } from "@/types/canvas";
 
-test("stopping an unknown local wait preserves its operation and current draft without claiming cancellation", () => {
+test("stopping an unknown local wait archives its operation and releases the edited node", () => {
     const node: CanvasNodeData = {id: "target", type: CanvasNodeType.Video, title: "draft", position: {x: 0, y: 0}, width: 320, height: 180, metadata: {status: "loading", composerContent: "edited", taskClientOperationId: "original-operation", generationSubmissionState: "unknown"}};
     const [stopped] = stopUnconfirmedCanvasGeneration([node], "target", "original-operation");
-    expect(stopped!.metadata).toMatchObject({status: "error", composerContent: "edited", taskClientOperationId: "original-operation", generationSubmissionState: "unknown"});
+    expect(stopped!.metadata).toMatchObject({status: "idle", composerContent: "edited"});
+    expect(stopped!.metadata?.taskClientOperationId).toBeUndefined();
+    expect(stopped!.metadata?.generationSubmissionState).toBeUndefined();
+    expect(stopped!.metadata?.stoppedGenerationSubmissions?.[0]).toMatchObject({operationId: "original-operation", state: "unknown"});
     expect(stopped!.metadata?.taskStatus).toBeUndefined();
-    expect(stopped!.metadata?.errorDetails).toContain("已停止本地等待");
+    expect(stopped!.metadata?.errorDetails).toBeUndefined();
     const submitting = {...node, metadata: {...node.metadata, generationSubmissionState: "submitting" as const}};
-    expect(stopUnconfirmedCanvasGeneration([submitting], "target", "original-operation")[0]!.metadata).toMatchObject({status: "error", generationSubmissionState: "unknown", taskClientOperationId: "original-operation"});
+    expect(stopUnconfirmedCanvasGeneration([submitting], "target", "original-operation")[0]!.metadata?.stoppedGenerationSubmissions?.[0]).toMatchObject({operationId: "original-operation", state: "unknown"});
     const rebound = {...node, metadata: {...node.metadata, taskId: "accepted-task"}};
     expect(stopUnconfirmedCanvasGeneration([rebound], "target", "original-operation")[0]).toBe(rebound);
     expect(stopUnconfirmedCanvasGeneration([node], "target", "obsolete-operation")[0]).toBe(node);

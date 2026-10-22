@@ -340,6 +340,7 @@ export type CanvasNodeMetadata = {
     taskId?: string;
     taskType?: string;
     taskClientOperationId?: string;
+    stoppedGenerationSubmissions?: Array<{ operationId: string; taskId?: string; stoppedAt: string; state: "unknown" }>;
     taskOutputIndex?: number;
     generationSubmissionState?: "submitting" | "unknown" | "accepted" | "rejected";
     taskClientOperationInput?: string;

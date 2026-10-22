@@ -24,6 +24,8 @@ import type { persistCanvasGenerationTarget } from "@/services/canvas-generation
 import { GenerationSubmissionUnknownError } from "@/services/api/generation-submission";
 import { userCancelledGeneration } from "@/services/api/generation-cancellation";
 import { useCanvasStore } from "@/stores/canvas/use-canvas-store";
+import { resetGenerationTaskMetadata } from "./canvas-generation-attempts";
+export { resetGenerationTaskMetadata } from "./canvas-generation-attempts";
 
 export async function runBackendCanvasGenerationTask(
     {
@@ -255,41 +257,6 @@ export function generationTaskMetadata(task: GenerationTask): CanvasNodeMetadata
         taskCreatedAt: task.createdAt || task.created_at,
         taskUpdatedAt: task.updatedAt || task.updated_at,
     };
-}
-
-// 失败节点再次提交前必须移除旧任务绑定，否则批次调度会把它误判为仍在处理。
-export function resetGenerationTaskMetadata(metadata: CanvasNodeMetadata | undefined, status: CanvasNodeMetadata["status"] = "idle"): CanvasNodeMetadata {
-    const next = {
-        ...(metadata || {}),
-        status,
-        errorDetails: undefined,
-        generationErrorCode: undefined,
-        generationErrorSummary: undefined,
-        resourceReloadAvailable: undefined,
-        failedPromptFingerprint: undefined,
-        failedInputFingerprint: undefined,
-    };
-    delete next.taskId;
-    delete next.taskType;
-    delete next.taskOutputIndex;
-    delete next.taskClientOperationId;
-    delete next.retryOf;
-    delete next.attemptGroupId;
-    delete next.taskStatus;
-    delete next.taskProgress;
-    delete next.taskStage;
-    delete next.taskProvider;
-    delete next.taskStartedAt;
-    delete next.taskCompletedAt;
-    delete next.taskDurationMs;
-    delete next.taskErrorCode;
-    delete next.taskFailureDiagnostics;
-    delete next.taskProviderRequestId;
-    delete next.taskOfficialStatus;
-    delete next.taskReceiptRecorded;
-    delete next.taskCreatedAt;
-    delete next.taskUpdatedAt;
-    return next;
 }
 
 export function clearInPlaceMediaOutputMetadata(metadata: CanvasNodeMetadata | undefined, status: CanvasNodeMetadata["status"] = "loading"): CanvasNodeMetadata {

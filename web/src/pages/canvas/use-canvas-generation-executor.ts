@@ -9,7 +9,7 @@ import { isGenerationCanceled } from "@/lib/canvas/canvas-project-generation";
 import { userCancelledGeneration } from "@/services/api/generation-cancellation";
 import { buildConfirmedGenerationConfig } from "./canvas-assistant-proposal-execution";
 import type { ConfirmedGenerationInputs } from "./canvas-assistant-proposal-snapshot";
-import { canvasGenerationPromptMetadata, canvasGenerationRequestFingerprint, runCanvasGenerationSubmissionOnce } from "@/lib/canvas/canvas-generation-submission";
+import { canvasGenerationPromptMetadata, canvasGenerationRequestFingerprint, runCanvasGenerationSubmissionOnce, stopUnconfirmedCanvasGeneration } from "@/lib/canvas/canvas-generation-submission";
 import { resolvedCanvasGenerationRequirements } from "@/lib/canvas/canvas-generation-config";
 import { isGenerationTaskCapacityError } from "@/lib/canvas/canvas-generation-batch";
 import { buildPortraitTexturePrompt } from "@/lib/canvas/canvas-portrait-texture";
@@ -23,7 +23,9 @@ import type { Skill } from "@/services/api/skills";
 import { skillRuntime } from "@/services/skill-runtime";
 import { recordDiagnosticEvent } from "@/services/diagnostics/client-diagnostics";
 import { findGenerationTaskByOperation, waitForGenerationTask, type GenerationTask } from "@/services/api/task-center";
-import { assertUserScope, captureUserScope } from "@/lib/user-scope-guard";
+import { assertUserScope, captureUserScope, userScopeMatches } from "@/lib/user-scope-guard";
+import { persistCanvasDocument } from "@/services/local-workspace-repository";
+import { useCanvasStore } from "@/stores/canvas/use-canvas-store";
 import { useConfigStore, useEffectiveConfig, resolveModelRequestConfig } from "@/stores/use-config-store";
 import { seedanceReferenceRatioWarning } from "@/lib/seedance-channel-warning";
 import type { Asset } from "@/stores/use-asset-store";
@@ -129,6 +131,7 @@ export function useCanvasGenerationExecutor({
                     };
                     diagnostic("generation_submit_started");
                     const controller = options?.controller ?? new AbortController();
+                    const submissionScope = captureUserScope();
                     const preparationMessageKey = `canvas-generation-preparation-${nodeId}`;
                     const reportError = (error: unknown) => {
                         if ((controller.signal.aborted && !userCancelledGeneration(controller.signal)) || isGenerationCanceled(error)) return;
@@ -500,12 +503,24 @@ export function useCanvasGenerationExecutor({
                     } catch (error) {
                         reportError(error);
                     } finally {
-                        if (userCancelledGeneration(controller.signal)) {
-                            setNodes((current) => current.map((node) => {
+                        if (userCancelledGeneration(controller.signal) && userScopeMatches(submissionScope)) {
+                            const stopNodes = (current: CanvasNodeData[]) => current.map((node) => {
                                 if (node.id !== nodeId && node.metadata?.generatedFromNodeId !== nodeId) return node;
-                                if (node.metadata?.taskId || node.metadata?.generationSubmissionState === "unknown") return node;
+                                if (node.metadata?.taskId) return node;
+                                if (node.metadata?.generationSubmissionState === "unknown" && node.metadata.taskClientOperationId) {
+                                    return stopUnconfirmedCanvasGeneration([node], node.id, node.metadata.taskClientOperationId)[0];
+                                }
                                 return { ...node, metadata: { ...node.metadata, status: node.metadata?.content ? NODE_STATUS_SUCCESS : NODE_STATUS_IDLE, generationSubmissionState: "rejected" as const, taskStage: "已取消，尚未提交生成任务", errorDetails: undefined } };
-                            }));
+                            });
+                            const archived = nodesRef.current.some((node) => (node.id === nodeId || node.metadata?.generatedFromNodeId === nodeId) && !node.metadata?.taskId && node.metadata?.generationSubmissionState === "unknown" && node.metadata.taskClientOperationId);
+                            if (archived) {
+                                const next = stopNodes(nodesRef.current);
+                                nodesRef.current = next;
+                                setNodes(next);
+                                useCanvasStore.getState().updateProject(projectId, { nodes: next });
+                                try { await persistCanvasDocument(projectId, { nodes: next }, submissionScope); }
+                                catch (error) { reportError(error); }
+                            } else setNodes(stopNodes);
                         }
                         diagnostic(controller.signal.aborted ? "generation_submission_aborted" : "generation_submission_finished");
                         message.destroy(preparationMessageKey);

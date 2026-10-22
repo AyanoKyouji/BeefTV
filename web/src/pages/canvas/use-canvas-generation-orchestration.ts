@@ -265,15 +265,34 @@ export function useCanvasGenerationOrchestration({
                   : undefined;
             if (!lifetime.matches(owner, projectIdRef.current) || !userScopeMatches(scope)) return;
             if (!task) {
-                if (node.metadata?.taskClientOperationId) setNodes((current) => stopUnconfirmedCanvasGeneration(current, node.id, node.metadata!.taskClientOperationId!));
-                message.warning("已停止本地等待；原提交尚未确认，请稍后查询，暂勿重复生成");
+                if (node.metadata?.taskClientOperationId) {
+                    const next = stopUnconfirmedCanvasGeneration(nodesRef.current, node.id, node.metadata.taskClientOperationId);
+                    nodesRef.current = next;
+                    setNodes(next);
+                    useCanvasStore.getState().updateProject(projectId, { nodes: next });
+                    await persistCanvasDocument(projectId, { nodes: next }, scope);
+                }
+                message.info("已停止等待，可以修改提示词后重新生成；上次请求已保留，仍可能继续计费");
                 return;
             }
             cancelCanvasTask(task);
         } catch (error) {
             if (lifetime.matches(owner, projectIdRef.current) && userScopeMatches(scope)) message.error(error instanceof Error ? error.message : "读取任务失败");
         }
-    }, [cancelCanvasTask, lifetime, message, projectId, requestNodeCancellation, setNodes]);
+    }, [cancelCanvasTask, lifetime, message, nodesRef, projectId, requestNodeCancellation, setNodes]);
+
+    const queryStoppedGeneration = useCallback(async (operationId: string) => {
+        const scope = captureUserScope();
+        const owner = lifetime.capture(projectId);
+        try {
+            const task = await findGenerationTaskByOperation(operationId, projectId);
+            if (!lifetime.matches(owner, projectIdRef.current) || !userScopeMatches(scope)) return;
+            if (task) setTaskDetail(task);
+            else message.info("上次请求尚无任务回执，当前节点仍可重新生成");
+        } catch (error) {
+            if (lifetime.matches(owner, projectIdRef.current) && userScopeMatches(scope)) message.error(error instanceof Error ? error.message : "暂时无法查询上次请求");
+        }
+    }, [lifetime, message, projectId, setTaskDetail]);
 
     const insertGenerationHistoryTask = useCallback(
         async (task: GenerationTask) => {
@@ -375,6 +394,7 @@ export function useCanvasGenerationOrchestration({
     return {
         cancellingNodeIds,
         cancelNodeGeneration,
+        queryStoppedGeneration,
         applyGenerationTaskResult,
         bindGenerationTask,
         finishGenerationRequest,

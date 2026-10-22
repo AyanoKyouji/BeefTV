@@ -1,7 +1,7 @@
 import { customerGenerationProject, type CustomerGenerationScenario } from "./customer-generation-scenarios";
 import { readFileSync } from "node:fs";
 
-const contexts = new Map<string, { project: ReturnType<typeof customerGenerationProject>; posts: any[]; cancels: string[]; downloads: string[]; lookups: string[]; task?: any; holdCharacter?: boolean; delayReceipt?: boolean; sameOriginHang?: boolean; release: () => void; gate: Promise<void> }>();
+const contexts = new Map<string, { project: ReturnType<typeof customerGenerationProject>; posts: any[]; tasks: any[]; cancels: string[]; downloads: string[]; lookups: string[]; task?: any; holdCharacter?: boolean; delayReceipt?: boolean; sameOriginHang?: boolean; release: () => void; gate: Promise<void> }>();
 const json = (data: unknown) => Response.json({ code: 0, data, msg: "ok" });
 // Valid 2.5 second PCM file so the browser, rather than a duration stub, probes it.
 function audioWav() {
@@ -57,19 +57,27 @@ export async function startCustomerScenarioServer(options: { port?: number } = {
             state.posts.push(body);
             // Match taskForOutput/publicTaskInputJSON: recovery receives mode
             // and metadata while credentials and binary references are omitted.
-            state.task ||= { id: "original-customer-task", projectId: body.projectId, type: body.type, prompt: body.prompt, clientOperationId: body.input?.metadata?.clientOperationId, status: "running", stage: "供应商处理中", progress: 10, attempts: 1, createdAt: "2026-10-17T00:00:00Z", updatedAt: "2026-10-17T00:00:00Z", inputJson: JSON.stringify({ mode: body.input.mode, metadata: body.input.metadata }) };
+            const operation = body.input?.metadata?.clientOperationId;
+            state.task = state.tasks.find(task => task.clientOperationId === operation);
+            if (!state.task) {
+                state.task = { id: state.tasks.length ? `customer-task-${state.tasks.length + 1}` : "original-customer-task", projectId: body.projectId, type: body.type, prompt: body.prompt, clientOperationId: operation, status: "running", stage: "供应商处理中", progress: 10, attempts: 1, createdAt: "2026-10-17T00:00:00Z", updatedAt: "2026-10-17T00:00:00Z", inputJson: JSON.stringify({ mode: body.input.mode, metadata: body.input.metadata }) };
+                state.tasks.push(state.task);
+            }
             if (state.delayReceipt) await new Promise(resolve => setTimeout(resolve, 6000));
             return json(state.task);
         }
-        if (url.pathname.startsWith("/api/tasks/by-operation/")) { state.lookups.push(url.pathname); return state.task ? json(state.task) : Response.json({ code: 404, msg: "not found", reason: "task_not_found" }, { status: 404 }); }
-        if (url.pathname === "/api/tasks") return json(state.task ? [state.task] : []);
-        if (url.pathname === "/api/tasks/original-customer-task/cancel" && request.method === "POST") {
-            state.cancels.push("original-customer-task");
-            if (!["running", "queued"].includes(state.task?.status)) return Response.json({ code: 409, msg: "任务已结束" }, {status: 409});
-            state.task = { ...state.task, status: "cancelled", stage: "任务已取消", error: "任务已取消" };
-            return json(state.task);
+        if (url.pathname.startsWith("/api/tasks/by-operation/")) { state.lookups.push(url.pathname); const task = state.tasks.find(task => task.clientOperationId === decodeURIComponent(url.pathname.slice("/api/tasks/by-operation/".length))); return task ? json(task) : Response.json({ code: 404, msg: "not found", reason: "task_not_found" }, { status: 404 }); }
+        if (url.pathname === "/api/tasks") return json(state.tasks);
+        const taskRoute = url.pathname.match(/^\/api\/tasks\/([^/]+)(\/cancel)?$/);
+        if (taskRoute) {
+            const task = state.tasks.find(task => task.id === taskRoute[1]);
+            if (taskRoute[2] && request.method === "POST") {
+                state.cancels.push(taskRoute[1]!);
+                if (!["running", "queued"].includes(task?.status)) return Response.json({ code: 409, msg: "任务已结束" }, {status: 409});
+                Object.assign(task, {status: "cancelled", stage: "任务已取消", error: "任务已取消"});
+            }
+            return json(task);
         }
-        if (url.pathname === "/api/tasks/original-customer-task") return json(state.task);
         if (url.pathname === "/api/projects/synthetic-domain/characters/character-asset") { if (state.holdCharacter) await state.gate; return json({ asset: { id: "character-asset", title: "测试角色" }, character: { versionId: "character-v1", definition: { appearance: "synthetic" }, representations: [{ resourceId: "character-image", role: "primary" }] } }); }
         const resource = url.pathname.match(/^\/api\/resources\/([^/]+)(\/file)?$/);
         if (resource) {
@@ -91,7 +99,7 @@ export async function startCustomerScenarioServer(options: { port?: number } = {
     return { server, contexts, stop() { for (const state of contexts.values()) state.release(); server.stop(true); mediaServer.stop(true); }, create(scenario: CustomerGenerationScenario) {
         const id = crypto.randomUUID();
         let release!: () => void;
-        const state = { project: customerGenerationProject(scenario), posts: [] as any[], cancels: [] as string[], downloads: [] as string[], lookups: [] as string[], gate: new Promise<void>(resolve => { release = resolve; }), release: () => release() };
+        const state = { project: customerGenerationProject(scenario), posts: [] as any[], tasks: [] as any[], cancels: [] as string[], downloads: [] as string[], lookups: [] as string[], gate: new Promise<void>(resolve => { release = resolve; }), release: () => release() };
         contexts.set(id, state);
         return { id, state, url: `${server.url}?case=${id}&scenario=${scenario}` };
     } };

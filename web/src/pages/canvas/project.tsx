@@ -922,6 +922,7 @@ function InfiniteCanvasPage() {
         cancelCanvasTask,
         cancellingNodeIds,
         cancelNodeGeneration,
+        queryStoppedGeneration,
         insertGenerationHistoryTask,
         enqueueGenerationBatch,
         retryFailedBatchItems,
@@ -2125,6 +2126,7 @@ function InfiniteCanvasPage() {
                     isRunning={isCanvasNodeGenerating(panelNode, runningNodeId)}
                     isCancelling={cancellingNodeIds.has(panelNode.id)}
                     onCancelGeneration={cancelNodeGeneration}
+                    onQueryStoppedGeneration={queryStoppedGeneration}
                     mentionReferences={[
                         ...(mentionReferencesByNodeId.get(panelNode.id) || EMPTY_RESOURCE_REFERENCES),
                         ...buildCanvasResourceReferences(nodesRef.current, connectionsRef.current).filter((reference) => reference.kind === "text" && reference.nodeId !== panelNode.id && !(mentionReferencesByNodeId.get(panelNode.id) || []).some((active) => active.nodeId === reference.nodeId)),
@@ -2167,6 +2169,7 @@ function InfiniteCanvasPage() {
             handleGenerateNode,
             cancellingNodeIds,
             cancelNodeGeneration,
+            queryStoppedGeneration,
             handleNodePromptChange,
             handleRemoveNodeReference,
             handleReorderNodeReferences,

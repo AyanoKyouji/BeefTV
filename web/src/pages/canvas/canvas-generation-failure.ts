@@ -3,6 +3,7 @@ import type { CanvasNodeData, CanvasNodeMetadata } from "@/types/canvas";
 import type { GenerationTask } from "@/services/api/task-center";
 import { CanvasGenerationTargetSaveError } from "@/services/canvas-generation-errors";
 import { generationTaskMetadata } from "@/lib/canvas/canvas-project-generation";
+import { stoppedGenerationTask } from "@/lib/canvas/canvas-generation-attempts";
 
 type GenerationReference = { id?: string; storageKey?: string; url?: string; dataUrl?: string };
 export type CanvasGenerationFailureInput = {
@@ -97,7 +98,9 @@ export function imageSubmissionUnknown(metadata: CanvasNodeMetadata | undefined)
 export function canvasGenerationTaskNodes(nodes: CanvasNodeData[], targetNodeId: string, task: GenerationTask): CanvasNodeData[] {
     return nodes.map((node) => {
         if (node.id !== targetNodeId) return node;
-        const failed = task.status === "failed" || task.status === "cancelled";
+        if (stoppedGenerationTask(node, task)) return node;
+        const cancelled = task.status === "cancelled";
+        const failed = task.status === "failed";
         const outputIndex = node.metadata?.taskOutputIndex ?? 0;
         const output = task.outputs?.find((item) => item.outputIndex === outputIndex);
         const paused = task.status === "succeeded" && !output?.materializedAssetId && [task.stage, output?.materializationErrorCode].some((code) => code === "delivery_paused" || code === "delivery_timed_out");
@@ -110,7 +113,8 @@ export function canvasGenerationTaskNodes(nodes: CanvasNodeData[], targetNodeId:
             metadata: {
                 ...node.metadata,
                 ...generationTaskMetadata(task),
-                status: failed || paused || retainRecovery ? "error" : hasCompletedContent ? "success" : "loading",
+                status: cancelled ? (node.metadata?.content || node.metadata?.storageKey ? "success" : "idle") : failed || paused || retainRecovery ? "error" : hasCompletedContent ? "success" : "loading",
+                ...(cancelled ? { lastGenerationRequestFingerprint: undefined } : {}),
                 ...(failure || (retainRecovery
                     ? { resourceReloadAvailable: !targetUnavailable, generationErrorCode: node.metadata?.generationErrorCode, errorDetails: node.metadata?.errorDetails || (targetUnavailable ? explainGenerationError({ code: "result_target_unavailable" }).message : "生成结果已保留，请点击「继续取回」") }
                     : { errorDetails: undefined, generationErrorCode: undefined, resourceReloadAvailable: undefined, failedPromptFingerprint: undefined, failedInputFingerprint: undefined })),

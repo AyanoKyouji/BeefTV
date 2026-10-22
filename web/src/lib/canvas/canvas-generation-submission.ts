@@ -4,11 +4,17 @@ import type { NodeGenerationContext } from "@/components/canvas/canvas-node-gene
 import type { CanvasNodeGenerationMode } from "@/components/canvas/canvas-node-prompt-panel";
 import { generationPromptFingerprint } from "@/lib/generation-error";
 import type { CanvasNodeData } from "@/types/canvas";
+import { resetGenerationTaskMetadata } from "./canvas-generation-attempts";
 
 export function stopUnconfirmedCanvasGeneration(nodes: CanvasNodeData[], nodeId: string, operationId: string) {
     return nodes.map((node) => {
         if (node.id !== nodeId || node.metadata?.taskId || node.metadata?.taskClientOperationId !== operationId || !["submitting", "unknown"].includes(node.metadata.generationSubmissionState || "")) return node;
-        return { ...node, metadata: { ...node.metadata, status: "error" as const, generationSubmissionState: "unknown" as const, taskStage: "提交结果待确认", errorDetails: "已停止本地等待；原提交尚未确认，保留原编号供查询，暂勿重复生成。" } };
+        const history = node.metadata.stoppedGenerationSubmissions || [];
+        return { ...node, metadata: {
+            ...resetGenerationTaskMetadata(node.metadata, node.metadata.content || node.metadata.storageKey ? "success" : "idle"),
+            lastGenerationRequestFingerprint: undefined,
+            stoppedGenerationSubmissions: history.some((entry) => entry.operationId === operationId) ? history : [...history, { operationId, stoppedAt: new Date().toISOString(), state: "unknown" as const }],
+        } };
     });
 }
 
