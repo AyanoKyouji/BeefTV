@@ -1,6 +1,18 @@
 import { describe, expect, test } from "bun:test";
 
-import { canvasGenerationPromptMetadata, canvasGenerationRequestFingerprint, runCanvasGenerationSubmissionOnce } from "@/lib/canvas/canvas-generation-submission";
+import { canvasGenerationPromptMetadata, canvasGenerationRequestFingerprint, runCanvasGenerationSubmissionOnce, stopUnconfirmedCanvasGeneration } from "@/lib/canvas/canvas-generation-submission";
+import { CanvasNodeType, type CanvasNodeData } from "@/types/canvas";
+
+test("stopping an unknown local wait preserves its operation and current draft without claiming cancellation", () => {
+    const node: CanvasNodeData = {id: "target", type: CanvasNodeType.Video, title: "draft", position: {x: 0, y: 0}, width: 320, height: 180, metadata: {status: "loading", composerContent: "edited", taskClientOperationId: "original-operation", generationSubmissionState: "unknown"}};
+    const [stopped] = stopUnconfirmedCanvasGeneration([node], "target", "original-operation");
+    expect(stopped!.metadata).toMatchObject({status: "error", composerContent: "edited", taskClientOperationId: "original-operation", generationSubmissionState: "unknown"});
+    expect(stopped!.metadata?.taskStatus).toBeUndefined();
+    expect(stopped!.metadata?.errorDetails).toContain("已停止本地等待");
+    const rebound = {...node, metadata: {...node.metadata, taskId: "accepted-task"}};
+    expect(stopUnconfirmedCanvasGeneration([rebound], "target", "original-operation")[0]).toBe(rebound);
+    expect(stopUnconfirmedCanvasGeneration([node], "target", "obsolete-operation")[0]).toBe(node);
+});
 
 function fingerprint(overrides: Partial<Parameters<typeof canvasGenerationRequestFingerprint>[0]> = {}) {
     return canvasGenerationRequestFingerprint({

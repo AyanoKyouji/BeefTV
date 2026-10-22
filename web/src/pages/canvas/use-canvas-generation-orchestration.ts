@@ -4,6 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { App } from "antd";
 import { nanoid } from "nanoid";
 import { buildGenerationConfig } from "@/lib/canvas/canvas-project-generation";
+import { stopUnconfirmedCanvasGeneration } from "@/lib/canvas/canvas-generation-submission";
 import { modelCapabilityConfigFor } from "@/lib/model-capabilities";
 import { captureUserScope, userScopeMatches } from "@/lib/user-scope-guard";
 
@@ -264,14 +265,15 @@ export function useCanvasGenerationOrchestration({
                   : undefined;
             if (!lifetime.matches(owner, projectIdRef.current) || !userScopeMatches(scope)) return;
             if (!task) {
-                message.warning("尚未查到原任务，已保留提交身份，请稍后查询，暂勿重复生成");
+                if (node.metadata?.taskClientOperationId) setNodes((current) => stopUnconfirmedCanvasGeneration(current, node.id, node.metadata!.taskClientOperationId!));
+                message.warning("已停止本地等待；原提交尚未确认，请稍后查询，暂勿重复生成");
                 return;
             }
             cancelCanvasTask(task);
         } catch (error) {
             if (lifetime.matches(owner, projectIdRef.current) && userScopeMatches(scope)) message.error(error instanceof Error ? error.message : "读取任务失败");
         }
-    }, [cancelCanvasTask, lifetime, message, projectId, requestNodeCancellation]);
+    }, [cancelCanvasTask, lifetime, message, projectId, requestNodeCancellation, setNodes]);
 
     const insertGenerationHistoryTask = useCallback(
         async (task: GenerationTask) => {

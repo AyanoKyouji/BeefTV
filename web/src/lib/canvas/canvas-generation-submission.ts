@@ -3,6 +3,14 @@ import { canonicalize } from "json-canonicalize";
 import type { NodeGenerationContext } from "@/components/canvas/canvas-node-generation";
 import type { CanvasNodeGenerationMode } from "@/components/canvas/canvas-node-prompt-panel";
 import { generationPromptFingerprint } from "@/lib/generation-error";
+import type { CanvasNodeData } from "@/types/canvas";
+
+export function stopUnconfirmedCanvasGeneration(nodes: CanvasNodeData[], nodeId: string, operationId: string) {
+    return nodes.map((node) => {
+        if (node.id !== nodeId || node.metadata?.taskId || node.metadata?.taskClientOperationId !== operationId || node.metadata.generationSubmissionState !== "unknown") return node;
+        return { ...node, metadata: { ...node.metadata, status: "error" as const, taskStage: "提交结果待确认", errorDetails: "已停止本地等待；原提交尚未确认，保留原编号供查询，暂勿重复生成。" } };
+    });
+}
 
 type GenerationReference = NodeGenerationContext["referenceImages"][number] | NodeGenerationContext["referenceVideos"][number] | NodeGenerationContext["referenceAudios"][number];
 
