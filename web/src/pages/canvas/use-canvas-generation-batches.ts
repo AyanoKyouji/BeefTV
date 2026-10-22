@@ -8,7 +8,7 @@ import { shouldBlockManualRetry } from "@/lib/generation-error";
 import { listGenerationTasks } from "@/services/api/task-center";
 import { useConfigStore, useEffectiveConfig } from "@/stores/use-config-store";
 import { useUserStore } from "@/stores/use-user-store";
-import { isLocalWorkspaceMode } from "@/services/workspace-mode";
+import { captureUserScope, userScopeMatches } from "@/lib/user-scope-guard";
 import type { CanvasGenerationBatch, CanvasGenerationBatchItem, CanvasGenerationBatchMode, CanvasNodeData } from "@/types/canvas";
 
 import type { CanvasNodeGenerationOptions } from "./use-canvas-generation-executor";
@@ -25,15 +25,21 @@ type UseCanvasGenerationBatchesOptions = {
     nodes: CanvasNodeData[];
     nodesRef: { current: CanvasNodeData[] };
     setNodes: Dispatch<SetStateAction<CanvasNodeData[]>>;
+    flushCanvasProject: (canvasId: string, signal: AbortSignal) => Promise<void>;
     handleGenerateNode: (nodeId: string, mode: CanvasNodeGenerationMode, prompt: string, options?: CanvasNodeGenerationOptions) => Promise<void>;
 };
 
-export function useCanvasGenerationBatches({ projectId, projectLoaded, nodes, nodesRef, setNodes, handleGenerateNode }: UseCanvasGenerationBatchesOptions) {
+export function useCanvasGenerationBatches({ projectId, projectLoaded, nodes, nodesRef, setNodes, handleGenerateNode, flushCanvasProject }: UseCanvasGenerationBatchesOptions) {
     const { message, modal } = App.useApp();
     const effectiveConfig = useEffectiveConfig();
     const isAiConfigReady = useConfigStore((state) => state.isAiConfigReady);
     const activeTaskLimit = useUserStore((state) => state.runtimeLimits.activeTaskLimit);
-    const localMode = isLocalWorkspaceMode();
+    const lifetimeRef = useRef(new AbortController());
+    useEffect(() => {
+        const controller = new AbortController();
+        lifetimeRef.current = controller;
+        return () => controller.abort();
+    }, [projectId]);
     const schedulingRef = useRef(false);
     const controllersRef = useRef(new Map<string, AbortController>());
 
@@ -155,18 +161,38 @@ export function useCanvasGenerationBatches({ projectId, projectLoaded, nodes, no
 
     // 仅查询当前画布的活跃任务来安排批次，跨画布并发仍由后端创建任务时原子校验。
     const scheduleWaitingItems = useCallback(async () => {
-        if (localMode || !projectLoaded || schedulingRef.current) return;
+        if (!projectLoaded || schedulingRef.current) return;
         schedulingRef.current = true;
+        const signal = lifetimeRef.current.signal;
+        const scope = captureUserScope();
         try {
-            const currentNodes = nodesRef.current;
             // 没有当前画布的等待项时无需查询任务中心，避免空画布持续轮询。
-            const hasWaitingItems = currentNodes.some((sourceNode) =>
+            const hasWaitingItems = nodesRef.current.some((sourceNode) =>
                 (sourceNode.metadata?.generationBatches || []).some((batch) => batch.projectId === projectId && batch.status !== "completed" && batch.status !== "cancelled" && batch.items.some((item) => item.status === "waiting")),
             );
             if (!hasWaitingItems) return;
 
+            try {
+                await flushCanvasProject(projectId, signal);
+            } catch (error) {
+                if (signal.aborted || !userScopeMatches(scope)) return;
+                const detail = error instanceof Error ? error.message : "画布保存失败";
+                setNodes(current => current.map(source => {
+                    if (!source.metadata?.generationBatches?.some(batch => batch.projectId === projectId && batch.items.some(item => item.status === "waiting"))) return source;
+                    return { ...source, metadata: { ...source.metadata, generationBatches: source.metadata.generationBatches.map(batch => {
+                        if (batch.projectId !== projectId) return batch;
+                        const next = { ...batch, items: batch.items.map(item => item.status === "waiting" ? { ...item, status: "failed" as const, errorDetails: `画布尚未保存，批次未提交：${detail}` } : item) };
+                        return { ...next, status: generationBatchStatus(next) };
+                    }) } };
+                }));
+                message.error(`画布尚未保存，未开始批量生成：${detail}`);
+                return;
+            }
+            if (signal.aborted || !userScopeMatches(scope)) return;
+
             const tasks = await listGenerationTasks(100, { projectId, activeOnly: true }).catch(() => null);
-            if (!tasks) return;
+            if (!tasks || signal.aborted || !userScopeMatches(scope)) return;
+            const currentNodes = nodesRef.current;
             const activeTaskCount = tasks.filter((task) => task.status === "queued" || task.status === "running").length;
             const nodeById = new Map(currentNodes.map((node) => [node.id, node]));
             const pendingReservations = [...controllersRef.current.keys()].filter((key) => {
@@ -233,7 +259,7 @@ export function useCanvasGenerationBatches({ projectId, projectLoaded, nodes, no
         } finally {
             schedulingRef.current = false;
         }
-    }, [activeTaskLimit, effectiveConfig, handleGenerateNode, isAiConfigReady, localMode, nodesRef, projectId, projectLoaded, reconcileBatches, updateBatch]);
+    }, [activeTaskLimit, effectiveConfig, flushCanvasProject, handleGenerateNode, isAiConfigReady, message, nodesRef, projectId, projectLoaded, reconcileBatches, setNodes, updateBatch]);
 
     const retryFailedBatchItems = useCallback(
         (sourceNodeId: string, batchId: string, itemId?: string) => {

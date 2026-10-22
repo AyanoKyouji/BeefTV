@@ -953,6 +953,7 @@ function InfiniteCanvasPage() {
         retryImageBatchChildren,
         generateImageFromTextNode,
     } = useCanvasGenerationOrchestration({
+        flushCanvasProject: flushCanvasProjectForAssistant,
         projectId,
         linkedProjectId,
         domainProjectId: currentProject?.projectId,

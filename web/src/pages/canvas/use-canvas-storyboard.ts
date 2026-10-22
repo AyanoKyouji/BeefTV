@@ -20,7 +20,7 @@ import {
 } from "@/lib/canvas/canvas-project-domain";
 import { buildNodeMentionReferences } from "@/lib/canvas/canvas-resource-references";
 import { buildStoryboardAssetCatalog } from "@/lib/canvas/canvas-storyboard-assets";
-import { resolveStoryboardGenerationContext } from "@/lib/canvas/canvas-storyboard-context";
+import { buildStoryboardGenerationPrompt, resolveStoryboardGenerationContext } from "@/lib/canvas/canvas-storyboard-context";
 import { reconcileStoryboardRowOutputs, reconcileStoryboardTargetConnections, storyboardComposerContent, storyboardRowReferenceNodeIds } from "@/lib/canvas/canvas-storyboard-materializer";
 import { generationErrorMessage } from "@/lib/generation-error";
 import { navigateToSettings } from "@/lib/settings-navigation";
@@ -169,6 +169,7 @@ export function useCanvasStoryboard({
                 prompt: expandedPrompt,
                 skills: addedSkills,
             });
+            const generationPrompt = buildStoryboardGenerationPrompt(skillExecution.prompt, storyboardContext, { shotCount: requestedShotCount, shotDurationSeconds });
             assertCurrent();
             setNodes((current) => current.map((node) => node.id === nodeId ? { ...node, metadata: { ...node.metadata, composerContent: prompt, status: NODE_STATUS_LOADING, taskStage: "正在创建任务", taskProgress: 0, errorDetails: undefined, ...skillExecution.metadata } } : node));
             assertCurrent();
@@ -176,12 +177,12 @@ export function useCanvasStoryboard({
                 projectId,
                 type: "canvas_text",
                 operation: "storyboard",
-                prompt: skillExecution.prompt,
+                prompt: generationPrompt,
                 model: generationConfig.model,
                 ...(logicalModelIDForConfig(generationConfig) ? { logicalModelId: logicalModelIDForConfig(generationConfig) } : {}),
                 input: {
                     mode: "text",
-                    prompt: skillExecution.prompt,
+                    prompt: generationPrompt,
                     canvasAssets: buildStoryboardAssetCatalog(nodesRef.current),
                     requirements: "输出可直接编辑并用于批量生成图片和视频的分镜表。",
                     projectStyle: storyboardContext.projectStyle,

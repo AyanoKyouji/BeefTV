@@ -43,6 +43,7 @@ type UseCanvasGenerationOrchestrationOptions = {
     /** 执行器 / 重试 / 历史插入的素材归属，沿用当前画布项目 id。 */
     domainProjectId?: string;
     projectLoaded: boolean;
+    flushCanvasProject: (canvasId: string, signal: AbortSignal) => Promise<void>;
     localOnly: boolean;
     addedSkills: Skill[];
     assets: Asset[];
@@ -64,6 +65,7 @@ export function useCanvasGenerationOrchestration({
     linkedProjectId,
     domainProjectId,
     projectLoaded,
+    flushCanvasProject,
     addedSkills,
     assets,
     nodes,
@@ -132,6 +134,7 @@ export function useCanvasGenerationOrchestration({
     });
 
     const { enqueueGenerationBatch, retryFailedBatchItems, stopRemainingBatchItems } = useCanvasGenerationBatches({
+        flushCanvasProject,
         projectId,
         projectLoaded,
         nodes,

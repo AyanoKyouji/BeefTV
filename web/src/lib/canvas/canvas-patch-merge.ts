@@ -1,5 +1,6 @@
 import type { CanvasProject } from "@/stores/canvas/use-canvas-store";
 import type { CanvasConnection, CanvasNodeData } from "@/types/canvas";
+import { settleInFlightGenerationOverlay } from "./canvas-document-rebase";
 
 type Change<T> = { before: T | null; after: T | null };
 export type CanvasPatch = {
@@ -112,6 +113,9 @@ export function applyCanvasPatch(project: CanvasProject, patch: CanvasPatch): Ca
 }
 
 export function mergeCanvasRefreshPatch(previous: CanvasProject, incoming: CanvasProject, nodes: CanvasNodeData[], connections: CanvasConnection[]) {
+    // The editor can still show loading while the same task is already bound
+    // in SQLite. Settle only its generation fields before checking user edits.
+    const live = settleInFlightGenerationOverlay({ base: previous, local: { ...previous, nodes, connections }, remote: incoming });
     const changes = <T extends { id: string }>(before: T[], after: T[]): Change<T>[] => {
         const byId = new Map(before.map((item) => [item.id, item]));
         const afterIds = new Set(after.map((item) => item.id));
@@ -120,7 +124,7 @@ export function mergeCanvasRefreshPatch(previous: CanvasProject, incoming: Canva
             ...before.filter((item) => !afterIds.has(item.id)).map((item) => ({ before: item, after: null })),
         ];
     };
-    return applyCanvasPatch({ ...previous, nodes, connections }, {
+    return applyCanvasPatch(live, {
         canvasId: previous.id,
         updatedAt: incoming.updatedAt,
         nodes: changes(previous.nodes, incoming.nodes),

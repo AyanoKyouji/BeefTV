@@ -70,6 +70,18 @@ test("task progress ahead of the server checkpoint still accepts terminal state"
     expect(isCanvasNodeGenerating(result.nodes[0])).toBe(false);
 });
 
+test("storyboard task delivery settles the loading overlay while preserving locally parsed rows and new images", () => {
+    const script: CanvasNodeData = { ...node, id: "script", type: CanvasNodeType.Script, metadata: { taskId: "storyboard-task", status: "idle", taskStatus: "queued", taskProgress: 0, storyboard: { rows: [], visibleColumns: [], referenceNodeIds: [] } } };
+    const before = { ...project, nodes: [script] };
+    const incoming = { ...before, nodes: [{ ...script, metadata: { ...script.metadata, status: "success" as const, taskStatus: "succeeded" as const, taskProgress: 100, content: '{"rows":[{"plotDescription":"女孩转身"}]}' } }] };
+    const live = { ...script, metadata: { ...script.metadata, status: "loading" as const, taskStatus: "succeeded" as const, taskProgress: 100, storyboard: { rows: [{ id: "shot-1", shotNumber: 1, durationSeconds: 5, plotDescription: "女孩转身", imageNodeId: "new-image" }] as never, visibleColumns: [], referenceNodeIds: [] } } };
+    const image = { ...node, id: "new-image", type: CanvasNodeType.Image, metadata: { status: "idle" as const } };
+    const merged = mergeCanvasRefreshPatch(before, incoming, [live, image], []);
+    expect(merged.nodes.map(item => item.id)).toEqual(["script", "new-image"]);
+    expect(merged.nodes[0].metadata?.storyboard?.rows[0].imageNodeId).toBe("new-image");
+    expect(merged.nodes[0].metadata?.status).toBe("success");
+});
+
 test("full Agent refresh removes unchanged nodes but preserves conflicting local edits", () => {
     const remaining = { ...node, id: "remaining", metadata: {} };
     const previous = { ...project, nodes: [node, remaining] };

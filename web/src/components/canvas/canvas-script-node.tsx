@@ -401,12 +401,8 @@ export function CanvasScriptNodeContent({
                         setPrompt(value);
                         onPromptChange(value);
                     }}
-                    onKeyDown={(event) => {
-                        if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) {
-                            event.preventDefault();
-                            submitPrompt();
-                        }
-                    }}
+                    sendOnEnter={false}
+                    onSubmit={submitPrompt}
                     onMouseDown={(event) => event.stopPropagation()}
                     onPointerDown={(event) => event.stopPropagation()}
                     onWheel={(event) => event.stopPropagation()}
@@ -461,6 +457,8 @@ export function CanvasScriptNodeContent({
                     )}
                     <Button
                         shape="circle"
+                        aria-label="生成分镜"
+                        title="生成分镜（⌘/Ctrl + Enter）"
                         icon={<Send className="size-4" />}
                         disabled={!prompt.trim() || node.metadata?.status === "loading"}
                         loading={node.metadata?.status === "loading"}
