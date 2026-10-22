@@ -47,3 +47,5 @@ GOTOOLCHAIN=local BEEFTV_WAILS_PLATFORM=darwin/arm64 \
 2026-10-21 补充修复了切换数据目录后画布缓存与数据库不一致、Agent 读取对话返回 404 的问题，见[修复记录](reports/MAC-AGENT-CANVAS_20261021.md)。已有窗口仍显示旧错误时，更新并重新打开客户端，再次发送消息。
 
 同日补充了当前中转的 H3 自动参考素材上传与 Predictions 协议，现有图片生成视频无需手填网址；接入规则见[说明](中转平台图生视频接入.md)，验证边界见[记录](reports/PREDICTIONS-H3_20261021.md)。
+
+2026-10-22 在此原生客户端中补验真实基础 H3：现有图片自动上传、单次 5 秒视频生成、本地资源交付、画布回填与播放器显示通过，实际费用 0.30 USD。见[真实验证记录](reports/PREDICTIONS-H3-REAL_20261022.md)。
