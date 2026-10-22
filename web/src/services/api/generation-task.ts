@@ -3,7 +3,8 @@ import { getMediaBlob } from "@/services/file-storage";
 import { resolveReferenceMediaDuration } from "@/lib/reference-media-metadata";
 import { getImageBlob } from "@/services/image-storage";
 import { resourceIdFromStorageKey, resourceStorageKey, uploadResourceFile } from "@/services/api/resources";
-import { createGenerationTask, findGenerationTaskByOperation, waitForGenerationTask, type GenerationTask, type CreateTaskInput } from "@/services/api/task-center";
+import { cancelGenerationTask, createGenerationTask, findGenerationTaskByOperation, queryGenerationTask, waitForGenerationTask, type GenerationTask, type CreateTaskInput } from "@/services/api/task-center";
+import { waitWithGenerationCancellation } from "./generation-cancellation";
 import { submitGenerationCommand } from "./generation-submission";
 import { modelCapabilityConfigFor } from "@/lib/model-capabilities";
 import { grokImagePromptLimitError } from "@/lib/grok-image-prompt-limit";
@@ -63,6 +64,8 @@ export type GenerationTaskDependencies = {
     waitTask: typeof waitForGenerationTask;
     createId: () => string;
     findTask?: typeof findGenerationTaskByOperation;
+    cancelTask?: typeof cancelGenerationTask;
+    queryTask?: typeof queryGenerationTask;
 };
 
 const defaultDependencies: GenerationTaskDependencies = {
@@ -279,9 +282,16 @@ function usesArkVideoAssetReference(config: AiConfig) {
 }
 
 async function createAndWaitGenerationTask(options: BackendGenerationTaskOptions, prepared: PreparedGenerationReferences, dependencies: GenerationTaskDependencies) {
+    options = { ...options, expectedScope: options.expectedScope ?? captureUserScope() };
     const task = await createBackendGenerationTask(options, prepared, dependencies);
     const { signal, onTaskUpdate, onTextDelta } = options;
-    const completed = await dependencies.waitTask(task.id, { signal, initialTask: task, onTaskUpdate, onTextDelta, expectedScope: options.expectedScope });
+    const completed = await waitWithGenerationCancellation({
+        signal,
+        cancel: () => (dependencies.cancelTask ?? cancelGenerationTask)(task.id, options.expectedScope),
+        query: () => (dependencies.queryTask ?? queryGenerationTask)(task.id, { expectedScope: options.expectedScope }),
+        publish: (next) => onTaskUpdate?.(next),
+        wait: () => dependencies.waitTask(task.id, { signal, initialTask: task, onTaskUpdate, onTextDelta, expectedScope: options.expectedScope }),
+    });
     return parseBackendGenerationResult(completed);
 }
 

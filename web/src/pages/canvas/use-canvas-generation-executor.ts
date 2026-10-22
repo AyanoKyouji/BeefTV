@@ -6,6 +6,7 @@ import { App } from "antd";
 import { buildNodeGenerationContext, hydrateNodeGenerationContext } from "@/components/canvas/canvas-node-generation";
 import type { CanvasNodeGenerationMode } from "@/components/canvas/canvas-node-prompt-panel";
 import { isGenerationCanceled } from "@/lib/canvas/canvas-project-generation";
+import { userCancelledGeneration } from "@/services/api/generation-cancellation";
 import { buildConfirmedGenerationConfig } from "./canvas-assistant-proposal-execution";
 import type { ConfirmedGenerationInputs } from "./canvas-assistant-proposal-snapshot";
 import { canvasGenerationPromptMetadata, canvasGenerationRequestFingerprint, runCanvasGenerationSubmissionOnce } from "@/lib/canvas/canvas-generation-submission";
@@ -130,7 +131,7 @@ export function useCanvasGenerationExecutor({
                     const controller = options?.controller ?? new AbortController();
                     const preparationMessageKey = `canvas-generation-preparation-${nodeId}`;
                     const reportError = (error: unknown) => {
-                        if (controller.signal.aborted || isGenerationCanceled(error)) return;
+                        if ((controller.signal.aborted && !userCancelledGeneration(controller.signal)) || isGenerationCanceled(error)) return;
                         const errText = generationErrorMessage(error);
                         diagnostic(error instanceof Error && error.name === "CanvasPreparationTimeoutError" ? "generation_preflight_timeout" : "generation_preflight_failed", "error", errText);
                         message.error(errText);
@@ -499,6 +500,13 @@ export function useCanvasGenerationExecutor({
                     } catch (error) {
                         reportError(error);
                     } finally {
+                        if (userCancelledGeneration(controller.signal)) {
+                            setNodes((current) => current.map((node) => {
+                                if (node.id !== nodeId && node.metadata?.generatedFromNodeId !== nodeId) return node;
+                                if (node.metadata?.taskId || node.metadata?.generationSubmissionState === "unknown") return node;
+                                return { ...node, metadata: { ...node.metadata, status: node.metadata?.content ? NODE_STATUS_SUCCESS : NODE_STATUS_IDLE, generationSubmissionState: "rejected" as const, taskStage: "已取消，尚未提交生成任务", errorDetails: undefined } };
+                            }));
+                        }
                         diagnostic(controller.signal.aborted ? "generation_submission_aborted" : "generation_submission_finished");
                         message.destroy(preparationMessageKey);
                         finishGenerationRequest(nodeId, controller);

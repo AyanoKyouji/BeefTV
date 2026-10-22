@@ -9,7 +9,7 @@ import { captureUserScope, userScopeMatches } from "@/lib/user-scope-guard";
 
 import { promoteLegacyBatchTableSize } from "@/lib/canvas/canvas-batch-table";
 import { persistCanvasDocument } from "@/services/local-workspace-repository";
-import { cancelGenerationTask, type GenerationTask } from "@/services/api/task-center";
+import { cancelGenerationTask, findGenerationTaskByOperation, queryGenerationTask, type GenerationTask } from "@/services/api/task-center";
 import { canvasTaskConfirmation } from "./canvas-task-confirmation";
 import { ensureCanvasNodeAsset } from "@/services/project-asset-sync";
 import type { Skill } from "@/services/api/skills";
@@ -63,7 +63,6 @@ export function useCanvasGenerationOrchestration({
     linkedProjectId,
     domainProjectId,
     projectLoaded,
-    localOnly,
     addedSkills,
     assets,
     nodes,
@@ -87,6 +86,8 @@ export function useCanvasGenerationOrchestration({
     const { lifetime } = useCanvasOwnerLifetime(projectId);
 
     const {
+        cancellingNodeIds,
+        requestNodeCancellation,
         applyGenerationTaskResult,
         bindGenerationTask,
         finishGenerationRequest,
@@ -224,7 +225,7 @@ export function useCanvasGenerationOrchestration({
             modal.confirm({
                 ...canvasTaskConfirmation,
                 title: deliveryOnly ? "停止取回结果？" : "取消生成任务？",
-                content: deliveryOnly ? "已生成的结果会保留，之后可以继续取回。" : localOnly ? "任务会立即停止本地执行。" : "任务会立即停止本地执行；如果已经提交到上游，系统会继续核对取消结果和积分状态。",
+                content: deliveryOnly ? "已生成的结果会保留，之后可以继续取回。" : "停止本地执行。上游支持撤销时会尝试取消；已受理的任务仍可能继续生成和计费，不保证退费。",
                 okText: deliveryOnly ? "停止取回" : "取消任务",
                 cancelText: "继续等待",
                 onOk: async () => {
@@ -237,7 +238,7 @@ export function useCanvasGenerationOrchestration({
                         setTaskDetail((current) => (current?.id === task.id ? next : current));
                         await queryClient.invalidateQueries({ queryKey: ["canvas-active-tasks", projectId] });
                         if (!isCurrent()) return;
-                        message.success(deliveryOnly ? "已停止取回" : "任务已取消");
+                        message.success(deliveryOnly ? "已停止取回" : "已停止本地任务；上游撤销与费用以平台结果为准");
                     } catch (error) {
                         if (!isCurrent()) return;
                         message.error(error instanceof Error ? error.message : "取消任务失败");
@@ -245,8 +246,32 @@ export function useCanvasGenerationOrchestration({
                 },
             });
         },
-        [bindGenerationTask, lifetime, localOnly, message, modal, nodesRef, projectId, queryClient, setTaskDetail],
+        [bindGenerationTask, lifetime, message, modal, nodesRef, projectId, queryClient, setTaskDetail],
     );
+
+    const cancelNodeGeneration = useCallback(async (node: CanvasNodeData) => {
+        if (requestNodeCancellation(node.id)) {
+            message.info("正在取消；若任务已被上游受理，仍可能继续生成和计费");
+            return;
+        }
+        const scope = captureUserScope();
+        const owner = lifetime.capture(projectId);
+        try {
+            const task = node.metadata?.taskId
+                ? await queryGenerationTask(node.metadata.taskId, { expectedScope: scope })
+                : node.metadata?.taskClientOperationId
+                  ? await findGenerationTaskByOperation(node.metadata.taskClientOperationId, projectId)
+                  : undefined;
+            if (!lifetime.matches(owner, projectIdRef.current) || !userScopeMatches(scope)) return;
+            if (!task) {
+                message.warning("尚未查到原任务，已保留提交身份，请稍后查询，暂勿重复生成");
+                return;
+            }
+            cancelCanvasTask(task);
+        } catch (error) {
+            if (lifetime.matches(owner, projectIdRef.current) && userScopeMatches(scope)) message.error(error instanceof Error ? error.message : "读取任务失败");
+        }
+    }, [cancelCanvasTask, lifetime, message, projectId, requestNodeCancellation]);
 
     const insertGenerationHistoryTask = useCallback(
         async (task: GenerationTask) => {
@@ -346,6 +371,8 @@ export function useCanvasGenerationOrchestration({
     );
 
     return {
+        cancellingNodeIds,
+        cancelNodeGeneration,
         applyGenerationTaskResult,
         bindGenerationTask,
         finishGenerationRequest,

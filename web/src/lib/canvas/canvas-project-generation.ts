@@ -22,6 +22,7 @@ import { assertUserScope, captureUserScope, isUserScopeAbandonedError, userScope
 import { CanvasGenerationDurableAckError, CanvasGenerationMaterializationError } from "@/services/canvas-generation-errors";
 import type { persistCanvasGenerationTarget } from "@/services/canvas-generation-target";
 import { GenerationSubmissionUnknownError } from "@/services/api/generation-submission";
+import { userCancelledGeneration } from "@/services/api/generation-cancellation";
 import { useCanvasStore } from "@/stores/canvas/use-canvas-store";
 
 export async function runBackendCanvasGenerationTask(
@@ -143,7 +144,7 @@ export async function runCanvasGenerationTaskToConsumer(
     input = { ...input, clientOperationId: input.clientOperationId || createClientId() };
     return runGenerationOperationOnce(input.clientOperationId, async () => {
         const expectedScope = input.expectedScope ?? captureUserScope();
-        const isCurrent = () => !input.signal?.aborted && userScopeMatches(expectedScope) && (dependencies.isCurrent ? dependencies.isCurrent() : true);
+        const isCurrent = () => (!input.signal?.aborted || userCancelledGeneration(input.signal)) && userScopeMatches(expectedScope) && (dependencies.isCurrent ? dependencies.isCurrent() : true);
         const submission = (state: NonNullable<CanvasNodeMetadata["generationSubmissionState"]>) => {
             if (!isCurrent()) return;
             const metadata = { taskClientOperationId: input.clientOperationId, generationSubmissionState: state, taskStage: state === "submitting" ? "正在提交生成任务" : state === "unknown" ? "提交结果待确认，请查询原任务" : undefined };
@@ -170,6 +171,11 @@ export async function runCanvasGenerationTaskToConsumer(
             onTaskCreated: (task) => {
                 accepted = true;
                 submission("accepted");
+                if (userCancelledGeneration(input.signal)) {
+                    assertUserScope(expectedScope);
+                    if (!dependencies.isCurrent || dependencies.isCurrent()) dependencies.bindTask(task);
+                    return;
+                }
                 if (input.signal?.aborted) throw new DOMException("The operation was aborted", "AbortError");
                 assertUserScope(expectedScope);
                 input.onTaskCreated?.(task);

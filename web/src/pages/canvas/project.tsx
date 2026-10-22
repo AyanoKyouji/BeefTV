@@ -8,7 +8,6 @@ import type { Dispatch, MouseEvent as ReactMouseEvent, SetStateAction } from "re
 import { Link, useNavigate, useParams, useSearchParams } from "react-router";
 import { appHref } from "@/lib/app-routing";
 import { isLocalWorkspaceMode } from "@/services/workspace-mode";
-import { queryGenerationTask } from "@/services/api/task-center";
 import { useConfigStore, useEffectiveConfig } from "@/stores/use-config-store";
 import { uploadMediaFile } from "@/services/file-storage";
 import { getActiveUserScope, scopedLocalStorage } from "@/lib/user-scope";
@@ -921,6 +920,8 @@ function InfiniteCanvasPage() {
         handleGenerateNode,
         handleRetryNode,
         cancelCanvasTask,
+        cancellingNodeIds,
+        cancelNodeGeneration,
         insertGenerationHistoryTask,
         enqueueGenerationBatch,
         retryFailedBatchItems,
@@ -2122,6 +2123,8 @@ function InfiniteCanvasPage() {
                     projectId={projectId}
                     node={panelNode}
                     isRunning={isCanvasNodeGenerating(panelNode, runningNodeId)}
+                    isCancelling={cancellingNodeIds.has(panelNode.id)}
+                    onCancelGeneration={cancelNodeGeneration}
                     mentionReferences={[
                         ...(mentionReferencesByNodeId.get(panelNode.id) || EMPTY_RESOURCE_REFERENCES),
                         ...buildCanvasResourceReferences(nodesRef.current, connectionsRef.current).filter((reference) => reference.kind === "text" && reference.nodeId !== panelNode.id && !(mentionReferencesByNodeId.get(panelNode.id) || []).some((active) => active.nodeId === reference.nodeId)),
@@ -2162,6 +2165,8 @@ function InfiniteCanvasPage() {
             configInputsById,
             handleConfigNodeChange,
             handleGenerateNode,
+            cancellingNodeIds,
+            cancelNodeGeneration,
             handleNodePromptChange,
             handleRemoveNodeReference,
             handleReorderNodeReferences,
@@ -2400,23 +2405,6 @@ function InfiniteCanvasPage() {
             void openNodeTaskDetails(node);
         },
         [openNodeTaskDetails],
-    );
-    const activeTasksRef = useRef(activeTasks);
-    activeTasksRef.current = activeTasks;
-    const handleCancelNodeTask = useCallback(
-        async (node: CanvasNodeData) => {
-            const taskId = node.metadata?.taskId;
-            if (!taskId) return;
-            const scope = captureUserScope();
-            try {
-                const task = activeTasksRef.current.find((item) => item.id === taskId) ?? (await queryGenerationTask(taskId));
-                assertUserScope(scope);
-                cancelCanvasTask(task);
-            } catch (error) {
-                message.error(error instanceof Error ? error.message : "读取任务失败");
-            }
-        },
-        [cancelCanvasTask, message],
     );
     const handleConnectionSelect = useCallback(
         (connectionId: string) => {
@@ -2731,7 +2719,7 @@ function InfiniteCanvasPage() {
                                                 onRetry={retryCanvasNode}
                                                 onReloadResource={reloadCanvasNodeResource}
                                                 onOpenTaskDetails={openCanvasNodeTaskDetails}
-                                                onCancelTask={handleCancelNodeTask}
+                                                onCancelTask={cancelNodeGeneration}
                                                 onOpenVersions={openCanvasNodeVersions}
                                                 onViewImage={viewCanvasNodeImage}
                                                 onReplaceMedia={replaceCanvasNodeMedia}

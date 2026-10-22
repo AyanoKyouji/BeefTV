@@ -1,7 +1,7 @@
 import { Button, Image as AntImage, InputNumber, Modal, Popover } from "antd";
 import { Tooltip } from "@/components/ui/base/tooltip";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from "react";
-import { ArrowLeftRight, ArrowUp, AtSign, Boxes, Camera, ChevronDown, FileText, GripVertical, ImageIcon, ImagePlus, Link2, LoaderCircle, Maximize2, Music2, Pencil, SlidersHorizontal, UserRound, Video, WandSparkles, X } from "lucide-react";
+import { ArrowLeftRight, ArrowUp, AtSign, Boxes, Camera, ChevronDown, FileText, GripVertical, ImageIcon, ImagePlus, Link2, LoaderCircle, Maximize2, Music2, Pencil, SlidersHorizontal, Square, UserRound, Video, WandSparkles, X } from "lucide-react";
 
 import { ModelPicker } from "@/components/model-picker";
 import { modelOptionName, resolveModelChannel, selectableModelsByCapability, useEffectiveConfig, type AiConfig } from "@/stores/use-config-store";
@@ -40,6 +40,8 @@ type CanvasNodePromptPanelProps = {
     projectId: string;
     node: CanvasNodeData;
     isRunning: boolean;
+    isCancelling?: boolean;
+    onCancelGeneration?: (node: CanvasNodeData) => void;
     onPromptChange: (nodeId: string, prompt: string) => void;
     onConfigChange: (nodeId: string, patch: Partial<CanvasNodeMetadata>) => void;
     onGenerate: (nodeId: string, mode: CanvasNodeGenerationMode, prompt: string) => void;
@@ -71,7 +73,7 @@ const PROMPT_EDITOR_MODAL_WIDTH = "min(1200px, 92vw)";
 const PROMPT_EDITOR_MODAL_DEFAULT_WIDTH = 1200;
 const PROMPT_EDITOR_MODAL_DEFAULT_HEIGHT = 420;
 
-export function CanvasNodePromptPanel({ projectId, node, isRunning, onPromptChange, onConfigChange, onGenerate, mentionReferences = [], onAddReference, onRemoveReference, onReorderReferences, onReplaceReference, onReplaceReferenceFiles, onClose, onNodeMouseDown, onImageSettingsOpenChange, workspaceMode = "professional" }: CanvasNodePromptPanelProps) {
+export function CanvasNodePromptPanel({ projectId, node, isRunning, isCancelling = false, onCancelGeneration, onPromptChange, onConfigChange, onGenerate, mentionReferences = [], onAddReference, onRemoveReference, onReorderReferences, onReplaceReference, onReplaceReferenceFiles, onClose, onNodeMouseDown, onImageSettingsOpenChange, workspaceMode = "professional" }: CanvasNodePromptPanelProps) {
     const globalConfig = useEffectiveConfig();
     const themeName = useActiveTheme();
     const theme = canvasThemes[themeName];
@@ -306,25 +308,27 @@ export function CanvasNodePromptPanel({ projectId, node, isRunning, onPromptChan
     );
 
     const renderSubmitButton = (expanded: boolean) => {
-        const actionLabel = isRunning ? "生成中" : "生成";
+        const canCancel = isRunning && Boolean(onCancelGeneration);
+        const actionLabel = isCancelling ? "正在取消生成" : canCancel ? "取消生成" : isRunning ? "生成中" : "生成";
+        const disabled = isCancelling || (isRunning ? !canCancel : isSubmitDisabled);
         return (
             <Button
                 type="text"
                 className="canvas-node-composer-submit canvas-node-composer-submit-canvas"
-                disabled={isRunning || isSubmitDisabled}
+                disabled={disabled}
                 style={
                     {
-                        color: isSubmitDisabled ? theme.node.faint : theme.node.text,
-                        "--canvas-composer-submit-action": isSubmitDisabled ? theme.toolbar.itemHover : monochromeAccent,
-                        "--canvas-composer-submit-action-fg": isSubmitDisabled ? theme.node.faint : theme.canvas.background,
+                        color: disabled ? theme.node.faint : theme.node.text,
+                        "--canvas-composer-submit-action": disabled ? theme.toolbar.itemHover : monochromeAccent,
+                        "--canvas-composer-submit-action-fg": disabled ? theme.node.faint : theme.canvas.background,
                     } as CSSProperties
                 }
-                onClick={() => (expanded ? submitExpandedPrompt() : submit())}
+                onClick={() => canCancel ? onCancelGeneration?.(node) : (expanded ? submitExpandedPrompt() : submit())}
                 aria-label={actionLabel}
-                title={actionLabel}
+                title={canCancel ? "停止本地任务；已被上游受理的请求仍可能继续生成和计费" : actionLabel}
             >
                 <span className="canvas-node-composer-submit-action" aria-hidden>
-                    {isRunning ? <LoaderCircle className="size-3.5 animate-spin motion-reduce:animate-none" /> : <ArrowUp className="size-3.5" strokeWidth={2.4} />}
+                    {isCancelling || (isRunning && !canCancel) ? <LoaderCircle className="size-3.5 animate-spin motion-reduce:animate-none" /> : canCancel ? <Square className="size-3.5" /> : <ArrowUp className="size-3.5" strokeWidth={2.4} />}
                 </span>
             </Button>
         );

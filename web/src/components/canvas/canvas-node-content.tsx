@@ -259,6 +259,11 @@ function LoadingContent({ node, theme, onOpenTaskDetails, onCancelTask }: Pick<C
                     </div>
                 </div>
             ) : null}
+            {!hasTaskIdentity && onCancelTask ? (
+                <button type="button" className="inline-flex h-7 items-center gap-1 rounded-[var(--r-sm)] px-2 text-[var(--fs-tiny)] font-medium" style={{ background: theme.toolbar.itemHover, color: theme.node.text }} onMouseDown={(event) => event.stopPropagation()} onClick={(event) => { event.stopPropagation(); onCancelTask(node); }} aria-label="取消生成任务">
+                    <Square className="size-3" />取消
+                </button>
+            ) : null}
         </div>
     );
 }

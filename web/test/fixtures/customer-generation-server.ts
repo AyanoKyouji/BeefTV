@@ -1,6 +1,7 @@
 import { customerGenerationProject, type CustomerGenerationScenario } from "./customer-generation-scenarios";
+import { readFileSync } from "node:fs";
 
-const contexts = new Map<string, { project: ReturnType<typeof customerGenerationProject>; posts: any[]; downloads: string[]; lookups: string[]; task?: any; holdCharacter?: boolean; delayReceipt?: boolean; sameOriginHang?: boolean; release: () => void; gate: Promise<void> }>();
+const contexts = new Map<string, { project: ReturnType<typeof customerGenerationProject>; posts: any[]; cancels: string[]; downloads: string[]; lookups: string[]; task?: any; holdCharacter?: boolean; delayReceipt?: boolean; sameOriginHang?: boolean; release: () => void; gate: Promise<void> }>();
 const json = (data: unknown) => Response.json({ code: 0, data, msg: "ok" });
 // Valid 2.5 second PCM file so the browser, rather than a duration stub, probes it.
 function audioWav() {
@@ -16,6 +17,9 @@ function audioWav() {
 export async function startCustomerScenarioServer(options: { port?: number } = {}) {
     const build = await Bun.build({ entrypoints: [import.meta.dir + "/customer-generation-harness.tsx"], target: "browser", define: { "process.env.NODE_ENV": '"production"', "import.meta.env.DEV": "false", "import.meta.env.PROD": "true", "import.meta.env.MODE": '"production"', "import.meta.env.VITE_CANVAS_LOCAL_MODE": '"true"', "import.meta.env.VITE_CANVAS_BACKEND_URL": '"/api"' }, plugins: [{ name: "source", setup(builder) {
         builder.onResolve({ filter: /^@\// }, args => ({ path: Bun.resolveSync("../../src/" + args.path.slice(2), import.meta.dir) }));
+        // Bun does not expand Vite's icon glob. Icons are outside these tests;
+        // keep the real composer and lifecycle while omitting only that catalog.
+        builder.onLoad({ filter: /\/model-logo\.tsx$/ }, args => ({contents: readFileSync(args.path, "utf8").replace(/^const iconModules = .*;$/m, "const iconModules = {};"), loader: "tsx"}));
         builder.onLoad({ filter: /\.(css|svg|png|jpe?g|gif|webp|woff2?)$/ }, () => ({ contents: "export default ''", loader: "js" }));
     } }] });
     if (!build.success) throw new Error(build.logs.join("\n"));
@@ -59,6 +63,12 @@ export async function startCustomerScenarioServer(options: { port?: number } = {
         }
         if (url.pathname.startsWith("/api/tasks/by-operation/")) { state.lookups.push(url.pathname); return state.task ? json(state.task) : Response.json({ code: 404, msg: "not found", reason: "task_not_found" }, { status: 404 }); }
         if (url.pathname === "/api/tasks") return json(state.task ? [state.task] : []);
+        if (url.pathname === "/api/tasks/original-customer-task/cancel" && request.method === "POST") {
+            state.cancels.push("original-customer-task");
+            if (!["running", "queued"].includes(state.task?.status)) return Response.json({ code: 409, msg: "任务已结束" }, {status: 409});
+            state.task = { ...state.task, status: "cancelled", stage: "任务已取消", error: "任务已取消" };
+            return json(state.task);
+        }
         if (url.pathname === "/api/tasks/original-customer-task") return json(state.task);
         if (url.pathname === "/api/projects/synthetic-domain/characters/character-asset") { if (state.holdCharacter) await state.gate; return json({ asset: { id: "character-asset", title: "测试角色" }, character: { versionId: "character-v1", definition: { appearance: "synthetic" }, representations: [{ resourceId: "character-image", role: "primary" }] } }); }
         const resource = url.pathname.match(/^\/api\/resources\/([^/]+)(\/file)?$/);
@@ -81,7 +91,7 @@ export async function startCustomerScenarioServer(options: { port?: number } = {
     return { server, contexts, stop() { for (const state of contexts.values()) state.release(); server.stop(true); mediaServer.stop(true); }, create(scenario: CustomerGenerationScenario) {
         const id = crypto.randomUUID();
         let release!: () => void;
-        const state = { project: customerGenerationProject(scenario), posts: [] as any[], downloads: [] as string[], lookups: [] as string[], gate: new Promise<void>(resolve => { release = resolve; }), release: () => release() };
+        const state = { project: customerGenerationProject(scenario), posts: [] as any[], cancels: [] as string[], downloads: [] as string[], lookups: [] as string[], gate: new Promise<void>(resolve => { release = resolve; }), release: () => release() };
         contexts.set(id, state);
         return { id, state, url: `${server.url}?case=${id}&scenario=${scenario}` };
     } };

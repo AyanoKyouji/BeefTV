@@ -17,6 +17,7 @@ import { generationFailureMetadata } from "@/lib/generation-error";
 import { canvasGenerationTaskNodes, canvasTaskFailureMetadata } from "./canvas-generation-failure";
 import { runGenerationConsumer } from "@/services/generation-consumer-lifecycle";
 import { consumeCanvasGenerationContinuation } from "./use-canvas-operation-history";
+import { USER_GENERATION_CANCEL } from "@/services/api/generation-cancellation";
 
 type CanvasGenerationRequest = {
     targetNodeId: string;
@@ -181,6 +182,7 @@ export function useCanvasGeneration({ projectId, domainProjectId, projectLoaded,
     const recoveryCoordinatorRef = useRef<ReturnType<typeof createCanvasGenerationRecoveryCoordinator> | null>(null);
     if (!recoveryCoordinatorRef.current) recoveryCoordinatorRef.current = createCanvasGenerationRecoveryCoordinator();
     const [runningNodeId, setRunningNodeId] = useState<string | null>(null);
+    const [cancellingNodeIds, setCancellingNodeIds] = useState<Set<string>>(() => new Set());
     const [taskDetail, setTaskDetail] = useState<GenerationTask | null>(null);
     const [retrievingTaskId, setRetrievingTaskId] = useState<string | null>(null);
     const retrievalRef = useRef<object | null>(null);
@@ -199,6 +201,18 @@ export function useCanvasGeneration({ projectId, domainProjectId, projectLoaded,
     const finishGenerationRequest = useCallback((targetNodeId: string, controller: AbortController) => {
         const request = generationRequestsRef.current.get(targetNodeId);
         if (request?.controller === controller) generationRequestsRef.current.delete(targetNodeId);
+        setCancellingNodeIds((current) => {
+            const pending = [...generationRequestsRef.current.values()].filter((item) => item.controller.signal.reason === USER_GENERATION_CANCEL);
+            return new Set([...current].filter((id) => pending.some((item) => [item.targetNodeId, item.originNodeId, item.runningNodeId].includes(id))));
+        });
+    }, []);
+
+    const requestNodeCancellation = useCallback((nodeId: string) => {
+        const requests = [...generationRequestsRef.current.values()].filter((item) => item.targetNodeId === nodeId || item.originNodeId === nodeId || item.runningNodeId === nodeId);
+        if (!requests.length) return false;
+        setCancellingNodeIds((current) => new Set([...current, nodeId, ...requests.flatMap((item) => [item.targetNodeId, item.originNodeId, item.runningNodeId])]));
+        requests.forEach((item) => item.controller.abort(USER_GENERATION_CANCEL));
+        return true;
     }, []);
 
     const openNodeTaskDetails = useCallback(
@@ -562,6 +576,8 @@ export function useCanvasGeneration({ projectId, domainProjectId, projectLoaded,
     }, [domainProjectId, localMode, message, nodes, projectId, projectLoaded, saveGeneratedAsset]);
 
     return {
+        cancellingNodeIds,
+        requestNodeCancellation,
         applyGenerationTaskResult,
         bindGenerationTask,
         finishGenerationRequest,

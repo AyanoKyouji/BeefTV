@@ -11,6 +11,8 @@ import { createModelChannel, defaultConfig, encodeChannelModel, useConfigStore }
 import { useCanvasStore } from "../../src/stores/canvas/use-canvas-store";
 import { useUserStore } from "../../src/stores/use-user-store";
 import type { CanvasNodeData } from "../../src/types/canvas";
+import { CanvasNodePromptPanel } from "../../src/components/canvas/canvas-node-prompt-panel";
+import { isCanvasNodeGenerating } from "../../src/lib/canvas/canvas-node-task-state";
 import { customerGenerationProject, type CustomerGenerationScenario } from "./customer-generation-scenarios";
 
 const params = new URLSearchParams(location.search);
@@ -20,8 +22,8 @@ const noop = () => {};
 setActiveUserScope("synthetic-customer");
 useUserStore.getState().setHydrated(true);
 useUserStore.getState().setStorageMode("local");
-const selectedModel = params.has("incompatible-model") ? "kling-v2.6" : "seedance-2.5";
-const protocol = params.has("incompatible-model") ? "novita-video" : "newapi-channel-2";
+const selectedModel = params.has("cancel-controls") ? "minimax-h3" : params.has("incompatible-model") ? "kling-v2.6" : "seedance-2.5";
+const protocol = params.has("cancel-controls") ? "predictions-h3-video" : params.has("incompatible-model") ? "novita-video" : "newapi-channel-2";
 const channel = createModelChannel({ id: "synthetic", name: "Synthetic", baseUrl: location.origin + "/upstream", apiKey: "synthetic-not-a-secret", interfaceType: protocol, models: [selectedModel], modelProfiles: [{ model: selectedModel, protocol }] });
 const model = encodeChannelModel(channel.id, selectedModel);
 useConfigStore.getState().replaceConfig({ ...defaultConfig, channels: [channel], model, videoModel: model, videoModels: [model], models: [model], videoSeconds: "5", size: "16:9" });
@@ -60,6 +62,14 @@ function Harness() {
     harness.edit = () => setNodes(current => current.map(node => node.id === "target" ? { ...node, title: "准备期间改过的标题", metadata: { ...node.metadata, composerContent: "准备期间修改的新提示词" } } : node));
     harness.cancel = () => harness.controller?.abort();
     return <>
+        {params.has("cancel-controls") ? <CanvasNodePromptPanel
+            projectId={project.id} node={nodes.find(node => node.id === "target")!}
+            isRunning={isCanvasNodeGenerating(nodes.find(node => node.id === "target"), generation.runningNodeId)}
+            isCancelling={generation.cancellingNodeIds.has("target")}
+            onCancelGeneration={node => { generation.requestNodeCancellation(node.id); }}
+            onPromptChange={(_id, composerContent) => setNodes(current => current.map(node => node.id === "target" ? {...node, metadata: {...node.metadata, composerContent}} : node))}
+            onConfigChange={noop} onGenerate={() => void harness.generate()} workspaceMode="simple"
+        /> : null}
         <button onClick={() => void harness.generate()}>生成视频</button>
         <button onClick={() => harness.edit()}>准备期间修改画布</button>
         <button onClick={() => harness.cancel()}>取消准备</button>
