@@ -12,7 +12,12 @@ import (
 )
 
 const predictionsH3Protocol = "predictions-h3-video"
+const predictionsFluxProtocol = "predictions-flux-image"
 const predictionsFileLimit = 20 << 20
+
+func usesPredictionsUpload(protocol string) bool {
+	return protocol == predictionsH3Protocol || protocol == predictionsFluxProtocol
+}
 
 // This upload belongs to the selected relay contract, not arbitrary URL-only
 // providers. Use the same authenticated outbound transport as generation.

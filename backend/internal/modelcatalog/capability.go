@@ -55,6 +55,14 @@ func videoDurationSupported(value *VideoCapabilityConfig) bool {
 }
 
 func DefaultImageCapabilityConfig(protocol string, modelName string) *ImageCapabilityConfig {
+	if protocol == "predictions-flux-image" {
+		return &ImageCapabilityConfig{
+			References: ImageReferenceConfig{PromptMaxChars: 32000, MaxImages: 10, MaxImageBytes: 20 << 20},
+			Size:       ImageSizeConfig{Parameter: "aspect_ratio", Values: []string{"auto", "21:9", "2:1", "16:9", "3:2", "7:5", "4:3", "5:4", "1:1", "4:5", "3:4", "5:7", "2:3", "9:16", "1:2"}, Default: "auto"},
+			Quality:    ImageQualityConfig{Supported: true, Values: []string{"auto", "512sq", "768sq", "1k", "2k", "4k"}, Default: "1k"},
+			MaxOutputs: 1,
+		}
+	}
 	if contract, ok := providerpreset.BeefAPIImageContract(modelName); ok && protocol == "openai-image" {
 		values := make([]string, 0, len(contract.Sizes))
 		for ratio := range contract.Sizes {

@@ -59,7 +59,7 @@ func DeclarativeProtocolPollPolicy(mode string) VideoPollPolicy {
 }
 
 func RunProtocolAdapterTaskWithPolicy(ctx context.Context, input Input, adapter protocol.Adapter, policy VideoPollPolicy) (map[string]interface{}, error) {
-	if input.Config.InterfaceType == predictionsH3Protocol {
+	if usesPredictionsUpload(input.Config.InterfaceType) {
 		policy.Interval = 3 * time.Second
 	}
 	if input.Mode == "video" {

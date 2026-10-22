@@ -295,6 +295,9 @@ func runMedia(opCtx *Context, operation string, raw json.RawMessage) (any, error
 	if args.ExpectedVersion != "" && args.ExpectedVersion != version {
 		return nil, Conflict("stale_media_version", "素材内容已变化，请重新读取 overview", map[string]any{"currentVersion": version})
 	}
+	if resource.MimeType == "image/png" || resource.MimeType == "image/jpeg" || resource.MimeType == "image/gif" {
+		return inspectStillImage(ctx, operation, args, resourceID, version, input)
+	}
 	facts, err := editing.Probe(ctx, input)
 	if err != nil {
 		return nil, PreconditionFailed("media_probe_failed", "无法检查媒体，请确认 ffprobe 已安装且素材可读取", nil)

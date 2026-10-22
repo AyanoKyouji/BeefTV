@@ -7,6 +7,16 @@ import { modelCompatibilityError } from "../src/lib/model-selection.ts";
 import type { AiConfig } from "../src/stores/use-config-store.ts";
 import { seedanceTaskOptions, seedanceOmniTaskType } from "../src/lib/seedance-task-constraints.ts";
 
+test("Predictions Flux uses URL references and the declared resolution tiers", () => {
+    const image = defaultModelCapabilityConfig("predictions-flux-image", "flux-3-image").image!;
+    assert.equal(image.references.maxImages, 10);
+    assert.equal(image.references.maxImageBytes, 20 * 1024 * 1024);
+    assert.equal(image.size.parameter, "aspect_ratio");
+    assert.equal(image.quality.default, "1k");
+    assert.deepEqual(image.quality.values, ["auto", "512sq", "768sq", "1k", "2k", "4k"]);
+    assert.equal(image.maxOutputs, 1);
+});
+
 test("Predictions H3 exposes the relay schema limits without MiniMax native defaults", () => {
     const video = defaultModelCapabilityConfig("predictions-h3-video", "minimax-h3").video!;
     assert.equal(videoDurationAllowed(video, 4), false);

@@ -10,6 +10,8 @@ BeefTV 是单用户、本地优先的桌面应用。项目、画布、素材和�
 
 模型服务设置由 `web/src/pages/settings/model-service-editor.tsx` 管理添加和编辑草稿；`model-service-presets.ts` 依据已启用的协议插件填写初始配置。`model-connection-test.ts` 通过正常后端生成任务验证结果。`internal/workspace/provider_config.go` 持有配置版本、保存冲突和文件读写，`internal/localcrypto` 统一工作区凭据加解密格式。
 
+Predictions FLUX 图片协议位于 `plugin-packages/predictions-flux-image`；与 H3 共用 `internal/generation/predictions_upload.go`，先上传参考素材，再创建异步任务。`internal/operations/media_image.go` 为已授权的 PNG/JPEG/GIF 生成有尺寸上限的静态预览，沿用资源归属与内容版本检查，无需视频解码工具；音视频检查仍由原有工具链处理。
+
 ```text
 Wails / local dev
   -> internal/bootstrap        组合根、数据库、HTTP 生命周期

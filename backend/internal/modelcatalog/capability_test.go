@@ -39,6 +39,21 @@ func TestPredictionsH3CapabilityMatchesRelaySchema(t *testing.T) {
 	}
 }
 
+func TestPredictionsFluxCapabilityMatchesRelaySchema(t *testing.T) {
+	profile := DefaultImageCapabilityConfig("predictions-flux-image", "flux-3-image")
+	if profile.References.MaxImages != 10 || profile.References.MaxImageBytes != 20<<20 || profile.Size.Parameter != "aspect_ratio" || profile.Quality.Default != "1k" || profile.MaxOutputs != 1 {
+		t.Fatalf("wrong Flux schema: %#v", profile)
+	}
+	for _, quality := range []string{"auto", "1k", "512sq", "4k"} {
+		if err := validateImageTask(profile, TaskInput{Prompt: "girl", Config: TaskConfig{Quality: quality, Size: "16:9", Count: "1"}}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := validateImageTask(profile, TaskInput{Prompt: "girl", Config: TaskConfig{Quality: "high", Size: "16:9"}}); err == nil {
+		t.Fatal("accepted OpenAI quality")
+	}
+}
+
 func TestGPTImageQualityTiersValidateAll39Selections(t *testing.T) {
 	count := 0
 	legacyProfile := DefaultImageCapabilityConfig("openai-image", "gpt-image-2")

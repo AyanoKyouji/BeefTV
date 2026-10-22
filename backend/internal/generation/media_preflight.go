@@ -50,7 +50,7 @@ func ValidateMediaTransport(ctx context.Context, input Input) error {
 			continue
 		}
 		for i, media := range group.items {
-			if input.Config.InterfaceType == predictionsH3Protocol && !groupPolicy.ManualURL && group.label != "遮罩" {
+			if usesPredictionsUpload(input.Config.InterfaceType) && !groupPolicy.ManualURL && group.label != "遮罩" {
 				continue // The selected relay uploads owned/inline media in the worker, never during admission.
 			}
 			if group.kind == "video" && isBytePlusVideoInput(input) && !strings.HasPrefix(media.StorageKey, "resource:") {

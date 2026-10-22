@@ -401,6 +401,13 @@ export function upgradeGPTImageCapability(profile: ImageCapabilityConfig, protoc
 }
 
 export function defaultImageCapabilityConfig(protocol?: ModelProtocol, model = ""): ImageCapabilityConfig {
+    if (protocol === "predictions-flux-image") return {
+        references: { promptMaxChars: 32000, maxImages: 10, maxImageBytes: 20 * 1024 * 1024, maskSupported: false },
+        size: { parameter: "aspect_ratio", values: ["auto", "21:9", "2:1", "16:9", "3:2", "7:5", "4:3", "5:4", "1:1", "4:5", "3:4", "5:7", "2:3", "9:16", "1:2"], default: "auto", allowCustom: false },
+        quality: { supported: true, values: ["auto", "512sq", "768sq", "1k", "2k", "4k"], default: "1k" },
+        transparentBackground: { supported: false, default: false },
+        responseFormat: { supported: false }, outputFormat: { supported: false }, maxOutputs: 1,
+    };
     const image: ImageCapabilityConfig = {
         references: { promptMaxChars: 32000, maxImages: 16, maxImageBytes: 30 * 1024 * 1024, maskSupported: true },
         size: { parameter: "size", values: [...defaultImageSizes], default: "1:1", allowCustom: true },

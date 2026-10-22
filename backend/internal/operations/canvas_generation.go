@@ -63,8 +63,23 @@ func opCanvasGenerationStart(ctx *Context, raw json.RawMessage) (any, error) {
 	if strings.TrimSpace(prompt) != strings.TrimSpace(args.Prompt) {
 		return nil, Conflict("generation_input_changed", "提示词已修改，请重新读取节点后按最新要求生成", nil)
 	}
-	if meta["status"] == "loading" || meta["generationSubmissionState"] == "unknown" || meta["generationSubmissionState"] == "submitting" {
+	if meta["generationSubmissionState"] == "unknown" || meta["generationSubmissionState"] == "submitting" {
 		return nil, PreconditionFailed("generation_pending", "当前节点已有未结束的生成，请查询原任务", nil)
+	}
+	if meta["status"] == "loading" {
+		// A failed task has no success delivery to clear the persisted loading
+		// projection. Resolve its owned task instead of trusting that UI flag.
+		id, _ := meta["taskId"].(string)
+		if id == "" {
+			return nil, PreconditionFailed("generation_pending", "当前节点已有未结束的生成，请查询原任务", nil)
+		}
+		prior, err := ctx.Domain.WorkspaceTask(ctx.UserID, id)
+		if err != nil {
+			return nil, mapDomainError(err)
+		}
+		if !canReplaceFailedGeneration(prior, args.CanvasID) {
+			return nil, PreconditionFailed("generation_pending", "原任务尚未结束或结果需要恢复，请先查询原任务", nil)
+		}
 	}
 	references := []generation.Media{}
 	seen := map[string]bool{}
@@ -127,4 +142,12 @@ func opCanvasGenerationStart(ctx *Context, raw json.RawMessage) (any, error) {
 		return nil, mapDomainError(err)
 	}
 	return map[string]any{"canvasId": args.CanvasID, "nodeId": args.NodeID, "taskId": task.ID, "kind": args.Kind, "status": task.Status, "revision": summary.Revision, "submitted": true}, nil
+}
+
+func canReplaceFailedGeneration(task *model.Task, canvasID string) bool {
+	if task == nil || task.ProjectID != canvasID || task.Status != model.TaskStatusFailed || task.Stage == "submission_unknown" || task.ProviderCancelStatus == model.ProviderCancelStatusRequested {
+		return false
+	}
+	failure := generation.ClassifyText(task.Error)
+	return !failure.Uncertain && failure.Category != generation.CategorySubmissionUncertain && failure.Category != generation.CategoryDownloadFailed && failure.Category != generation.CategoryDeliveryFailed
 }

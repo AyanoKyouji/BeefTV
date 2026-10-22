@@ -20,6 +20,7 @@ const BUILTIN_PROTOCOL_CAPABILITIES: Record<ModelProtocol, ProtocolCapability> =
     "claude-api": "text",
     "gemini-generate-content": "text",
     "openai-image": "image",
+    "predictions-flux-image": "image",
     "openai-videos": "video",
     "gemini-image": "image",
     "grok-image": "image",

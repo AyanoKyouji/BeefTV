@@ -19,7 +19,7 @@ func HydrateMedia(ctx context.Context, userID string, input *Input, policy Media
 	for kind, group := range groups {
 		groupPolicy := mediaPolicyForKind(ctx, *input, []string{"image", "video", "audio"}[kind], policy)
 		for index := range group {
-			if input.Config.InterfaceType == predictionsH3Protocol && !groupPolicy.ManualURL {
+			if usesPredictionsUpload(input.Config.InterfaceType) && !groupPolicy.ManualURL {
 				if err := hydratePredictionsReference(ctx, userID, &group[index], input.Config); err != nil {
 					return RequestPreparationError{Cause: referenceUploadError(ctx, err)}
 				}
