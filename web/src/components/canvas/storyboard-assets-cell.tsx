@@ -57,6 +57,27 @@ export function StoryboardAssetsCell({ bindings, nodes, limit = 4 }: { bindings:
     );
 }
 
+export function StoryboardMediaPreview({ node, label, kind, className = "h-full w-full" }: { node?: CanvasNodeData; label: string; kind?: "image" | "video"; className?: string }) {
+    const [open, setOpen] = useState(false);
+    const source = useNodeMediaSource(node?.type === CanvasNodeType.Video ? null : node || null);
+    const thumbnail = node?.type === CanvasNodeType.Video ? canvasNodeVideoPreviewUrl(node) : source;
+    const available = Boolean(node?.metadata?.content || node?.metadata?.storageKey);
+    const video = kind === "video" || node?.type === CanvasNodeType.Video;
+    return (
+        <>
+            <button type="button" className={`relative grid min-h-0 min-w-0 place-items-center overflow-hidden rounded-lg border border-foreground/10 bg-foreground/[.035] text-foreground/45 outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-primary)] disabled:cursor-default ${className}`}
+                aria-label={available ? `预览${label}` : `${label}未生成`} disabled={!available}
+                onPointerDown={(event) => event.stopPropagation()} onMouseDown={(event) => event.stopPropagation()}
+                onClick={(event) => { event.stopPropagation(); setOpen(true); }}>
+                {thumbnail ? <img src={thumbnail} alt={label} loading="lazy" decoding="async" draggable={false} className="absolute inset-0 size-full object-contain" />
+                    : <span className="flex flex-col items-center gap-1 text-xs">{video ? <Play className="size-5" /> : <ImageIcon className="size-5" />}{available ? `查看${label}` : `${label}未生成`}</span>}
+                {available && node?.type === CanvasNodeType.Video ? <span className="absolute inset-0 grid place-items-center"><Play className="size-5 fill-white text-white drop-shadow" /></span> : null}
+            </button>
+            {open ? <AssetPreviewModal node={node || null} onClose={() => setOpen(false)} /> : null}
+        </>
+    );
+}
+
 function AssetThumbnail({ node }: { node: CanvasNodeData }) {
     const videoPreview = canvasNodeVideoPreviewUrl(node);
     const source = useNodeMediaSource(node.type === CanvasNodeType.Video ? null : node);
@@ -76,7 +97,7 @@ function AssetThumbnail({ node }: { node: CanvasNodeData }) {
 function AssetPreviewModal({ node, onClose }: { node: CanvasNodeData | null; onClose: () => void }) {
     const source = useNodeMediaSource(node);
     return (
-        <Modal title={node?.title || "资产预览"} open={Boolean(node)} onCancel={onClose} footer={null} width={880} centered destroyOnHidden>
+        <Modal title={node?.title || "资产预览"} open={Boolean(node)} onCancel={onClose} footer={null} width={880} centered destroyOnHidden transitionName="" maskTransitionName="">
             {node ? (
                 <div className="grid min-h-56 place-items-center overflow-hidden rounded-lg bg-black/[0.035] p-3 dark:bg-white/[0.035]" data-canvas-no-zoom>
                     {node.type === CanvasNodeType.Video && source ? <video src={source} controls autoPlay playsInline className="max-h-[68vh] max-w-full rounded-md" />

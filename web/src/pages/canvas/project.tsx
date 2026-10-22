@@ -326,6 +326,7 @@ function InfiniteCanvasPage() {
         resetForClearCanvas,
     } = useCanvasProjectDialogs();
     const [toolbarNodeId, setToolbarNodeId] = useState<string | null>(null);
+    const [scriptEditorInitialRowId, setScriptEditorInitialRowId] = useState<string>();
     const [arkPrivateAssetUploadNodeId, setArkPrivateAssetUploadNodeId] = useState<string | null>(null);
     const [nodeImageSettingsOpen, setNodeImageSettingsOpen] = useState(false);
     const [dialogNodeId, setDialogNodeId] = useState<string | null>(null);
@@ -2247,7 +2248,9 @@ function InfiniteCanvasPage() {
                         pipeline={pipeline}
                         scale={viewport.k}
                         mentionReferences={mentionReferencesByNodeId.get(contentNode.id) || EMPTY_RESOURCE_REFERENCES}
-                        onOpen={() => setScriptEditorNodeId(contentNode.id)}
+                        onOpen={(rowId) => { setScriptEditorInitialRowId(rowId); setScriptEditorNodeId(contentNode.id); }}
+                        onCancelGeneration={(node) => void cancelNodeGeneration(node)}
+                        onLocate={(node) => focusCanvasNode(node.id)}
                         onCreateImageNodes={() => createScriptImageNodes(contentNode.id)}
                         onCreateVideoNodes={() => createScriptVideoNodes(contentNode.id)}
                         onGenerateImages={(rowIds) => void generateScriptImages(contentNode.id, rowIds)}
@@ -2259,8 +2262,6 @@ function InfiniteCanvasPage() {
                         onRetryBatchItem={(batchId, itemId) => retryFailedBatchItems(contentNode.id, batchId, itemId)}
                         onStopBatch={(batchId) => stopRemainingBatchItems(contentNode.id, batchId)}
                         onAddRow={() => addScriptRow(contentNode.id)}
-                        onRemoveRow={(rowId) => removeScriptRow(contentNode.id, rowId)}
-                        onUpdateRow={(rowId, patch) => updateScriptRow(contentNode.id, rowId, patch)}
                         onPromptChange={(composerContent) => handleConfigNodeChange(contentNode.id, { composerContent })}
                         onGenerateScript={(prompt) => void generateScriptRows(contentNode.id, prompt)}
                         onModelChange={(model) => handleConfigNodeChange(contentNode.id, { model })}
@@ -2318,6 +2319,8 @@ function InfiniteCanvasPage() {
             currentProject?.directorScenes,
             fillRowsFromConnections,
             focusCanvasImageNode,
+            focusCanvasNode,
+            cancelNodeGeneration,
             generateBatchRows,
             generateScriptImages,
             generateScriptRows,
@@ -3263,6 +3266,15 @@ function InfiniteCanvasPage() {
                             }}
                             script={{
                                 node: activeScriptNode,
+                                pipeline: activeScriptNode ? deriveStoryboardPipelineProgress(activeScriptNode, nodes, connections) : null,
+                                batch: activeScriptNode ? visibleGenerationBatch(activeScriptNode) : undefined,
+                                initialRowId: scriptEditorInitialRowId,
+                                onCancelGeneration: (node) => void cancelNodeGeneration(node),
+                                onLocate: (node) => { setScriptEditorNodeId(null); focusCanvasNode(node.id); },
+                                onMergeVideos: () => {
+                                    if (activeScriptNode) void mergeVideosByIds(deriveStoryboardPipelineProgress(activeScriptNode, nodesRef.current, connectionsRef.current).successfulVideoNodeIds);
+                                },
+                                onStopBatch: (batchId) => { if (activeScriptNode) stopRemainingBatchItems(activeScriptNode.id, batchId); },
                                 onClose: () => setScriptEditorNodeId(null),
                                 onUpdateRows: (rows) => {
                                     if (activeScriptNode) replaceScriptRows(activeScriptNode.id, rows);

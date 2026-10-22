@@ -13,6 +13,8 @@ import { CanvasNodeSearchModal } from "@/components/canvas/canvas-node-search-mo
 import { CanvasPanoramaConfigModal, type PanoramaGenerateConfig } from "@/components/canvas/canvas-panorama-config-modal";
 import { CanvasProjectAssetModal } from "@/components/canvas/canvas-project-asset-modal";
 import { CanvasScriptEditor } from "@/components/canvas/canvas-script-node";
+import type { CanvasStoryboardPipelineProgress } from "@/lib/canvas/canvas-storyboard-progress";
+import type { CanvasGenerationBatch } from "@/types/canvas";
 import { CanvasStylePickerModal } from "@/components/canvas/canvas-style-picker-modal";
 import { CanvasSubtitleDialog } from "@/components/canvas/canvas-subtitle-dialog";
 import { CanvasTextEditorModal } from "@/components/canvas/canvas-text-editor-modal";
@@ -141,6 +143,13 @@ export type CanvasProjectEditorDialogsProps = {
     };
     script: {
         node: CanvasNodeData | null;
+        pipeline: CanvasStoryboardPipelineProgress | null;
+        batch?: CanvasGenerationBatch;
+        initialRowId?: string;
+        onCancelGeneration: (node: CanvasNodeData) => void;
+        onLocate: (node: CanvasNodeData) => void;
+        onMergeVideos: () => void;
+        onStopBatch: (batchId: string) => void;
         onClose: () => void;
         onUpdateRows: (rows: StoryboardRow[]) => void;
         onVisibleColumnsChange: (columns: StoryboardColumn[]) => void;
@@ -296,6 +305,13 @@ export function CanvasProjectEditorDialogs({
             <CanvasScriptEditor
                 node={script.node}
                 nodes={nodes}
+                pipeline={script.pipeline}
+                batch={script.batch}
+                initialRowId={script.initialRowId}
+                onCancelGeneration={script.onCancelGeneration}
+                onLocate={script.onLocate}
+                onMergeVideos={script.onMergeVideos}
+                onStopBatch={script.onStopBatch}
                 open={Boolean(script.node)}
                 onClose={script.onClose}
                 onUpdateRows={script.onUpdateRows}

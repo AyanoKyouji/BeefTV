@@ -1,4 +1,4 @@
-export const STORYBOARD_ROW_HEIGHT = 48;
+export const STORYBOARD_ROW_HEIGHT = 168;
 export const STORYBOARD_HEADER_HEIGHT = 124;
 
 const STORYBOARD_ADD_ROW_HEIGHT = 36;
@@ -11,7 +11,7 @@ function normalizedComposerHeight(composerHeight: number) {
 }
 
 export function storyboardNodeHeight(rowCount: number, composerHeight = STORYBOARD_COMPOSER_MIN_HEIGHT) {
-    const visibleRows = Math.min(Math.max(rowCount, 1), 4);
+    const visibleRows = Math.min(Math.max(rowCount, 1), 2);
     return STORYBOARD_HEADER_HEIGHT + visibleRows * STORYBOARD_ROW_HEIGHT + STORYBOARD_ADD_ROW_HEIGHT + normalizedComposerHeight(composerHeight);
 }
 
