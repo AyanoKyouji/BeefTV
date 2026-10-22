@@ -49,3 +49,5 @@ GOTOOLCHAIN=local BEEFTV_WAILS_PLATFORM=darwin/arm64 \
 同日补充了当前中转的 H3 自动参考素材上传与 Predictions 协议，现有图片生成视频无需手填网址；接入规则见[说明](中转平台图生视频接入.md)，验证边界见[记录](reports/PREDICTIONS-H3_20261021.md)。
 
 2026-10-22 在此原生客户端中补验真实基础 H3：现有图片自动上传、单次 5 秒视频生成、本地资源交付、画布回填与播放器显示通过，实际费用 0.30 USD。见[真实验证记录](reports/PREDICTIONS-H3-REAL_20261022.md)。
+
+同日修复生成期间的取消入口：准备中即可点击方形取消按钮；迟到的创建回执会对原任务执行取消，编辑稿保留。已受理的上游请求仍可能计费，详见[取消修复记录](reports/GENERATION-CANCELLATION_20261022.md)。
