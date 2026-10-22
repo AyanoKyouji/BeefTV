@@ -1,6 +1,6 @@
-# Mac 原生客户端
+# YUNTV Mac 原生客户端
 
-本机应用固定为 `/Applications/BeefTV.app`，Apple Silicon（arm64）。在 Finder 的“应用程序”中双击 BeefTV 即可打开，无需先执行 `make dev`，也无需另开 Go/Vite/Node 服务。Node Agent、官方协议插件和本地媒体运行时随应用提供。
+本机应用固定为 `/Applications/YUNTV.app`，Apple Silicon（arm64）。在 Finder 的“应用程序”中双击 YUNTV 即可打开，无需先执行 `make dev`，也无需另开 Go/Vite/Node 服务。Node Agent、官方协议插件和本地媒体运行时随应用提供。
 
 ## 工作区与模型
 
@@ -11,7 +11,7 @@
 Mac 原生基础验证使用仓库忽略目录 `.local/project-workbench-debug/mac-native-20261021`。它是独立测试工作区；从仓库根目录打开该工作区可用：
 
 ```bash
-open -a /Applications/BeefTV.app --args "--data-dir=$PWD/.local/project-workbench-debug/mac-native-20261021"
+open -a /Applications/YUNTV.app --args "--data-dir=$PWD/.local/project-workbench-debug/mac-native-20261021"
 ```
 
 先保存并退出已有 BeefTV 窗口，再选择另一个数据目录。该命令只指定工作区，不提供模型配置，也不会自动生成内容。普通双击应用继续使用默认工作区。
@@ -36,7 +36,7 @@ GOTOOLCHAIN=local BEEFTV_WAILS_PLATFORM=darwin/arm64 \
 ./scripts/update-local-beeftv-app.sh
 ```
 
-若应用中有未保存内容，先保存。脚本先退出旧客户端释放数据目录锁，再完成发布检查、原生构建、资源打包及签名校验，最后更新 `/Applications/BeefTV.app`；临时构建出的 `.app` 会清理，不保留第二份可用应用。首次构建需要下载并编译 Wails/媒体依赖，耗时长于后续构建。
+若应用中有未保存内容，先保存。脚本先退出旧客户端释放数据目录锁，再完成发布检查、原生构建、资源打包及签名校验，最后更新 `/Applications/YUNTV.app`；临时构建出的 `.app` 会清理，不保留第二份可用应用。首次构建需要下载并编译 Wails/媒体依赖，耗时长于后续构建。
 
 后续本机更新可复用原应用中签名有效、固定版本和哈希一致的媒体组件，减少重复下载；媒体运行检查仍会执行。
 

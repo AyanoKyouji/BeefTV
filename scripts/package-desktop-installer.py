@@ -13,14 +13,14 @@ SUFFIXES = {'darwin-arm64': '.dmg', 'darwin-amd64': '.dmg',
 
 
 def installer_name(version, platform):
-    return f'BeefTV-{version}-{platform}{SUFFIXES[platform]}'
+    return f'YUNTV-{version}-{platform}{SUFFIXES[platform]}'
 
 
 def package(version, platform, payload, output):
     if not re.fullmatch(r'v\d+\.\d+\.\d+', version):
         raise ValueError('Installers require a stable repository version')
     payload, output = payload.resolve(), output.resolve()
-    exe = payload / ('Contents/MacOS/BeefTV' if platform.startswith('darwin-') else 'BeefTV.exe' if platform == 'windows-amd64' else 'BeefTV')
+    exe = payload / ('Contents/MacOS/YUNTV' if platform.startswith('darwin-') else 'YUNTV.exe' if platform == 'windows-amd64' else 'YUNTV')
     if not exe.is_file():
         raise ValueError('Release payload executable is missing')
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -29,10 +29,10 @@ def package(version, platform, payload, output):
         with tempfile.TemporaryDirectory(prefix='beeftv-dmg-') as directory:
             stage = Path(directory) / 'image'
             stage.mkdir()
-            subprocess.run(['ditto', str(payload), str(stage / 'BeefTV.app')], check=True)
+            subprocess.run(['ditto', str(payload), str(stage / 'YUNTV.app')], check=True)
             (stage / 'Applications').symlink_to('/Applications')
             shutil.copy2(ROOT / 'docs/desktop-install.md', stage / 'Installation.txt')
-            subprocess.run(['hdiutil', 'create', '-volname', 'BeefTV', '-srcfolder', str(stage),
+            subprocess.run(['hdiutil', 'create', '-volname', 'YUNTV', '-srcfolder', str(stage),
                             '-fs', 'HFS+', '-nospotlight', '-format', 'UDZO', '-verbose', '-ov', str(output)], check=True)
     elif platform == 'windows-amd64':
         compiler = shutil.which('makensis') or r'C:\Program Files (x86)\NSIS\makensis.exe'
@@ -45,30 +45,30 @@ def package(version, platform, payload, output):
     else:
         with tempfile.TemporaryDirectory(prefix='beeftv-deb-') as directory:
             stage = Path(directory)
-            bundle = stage / 'opt/beeftv/BeefTV-linux'
+            bundle = stage / 'opt/yuntv/YUNTV-linux'
             shutil.copytree(payload, bundle, symlinks=True)
             (bundle / '.package-managed').write_text('deb\n')
             control = stage / 'DEBIAN'
             control.mkdir()
             (control / 'control').write_text(
-                f'Package: beeftv\nVersion: {version[1:]}\nArchitecture: amd64\n'
-                'Maintainer: BeefTV Contributors <58928515+glanderness@users.noreply.github.com>\n'
-                'Homepage: https://github.com/glanderness/BeefTV\nSection: graphics\nPriority: optional\n'
+                f'Package: yuntv\nVersion: {version[1:]}\nArchitecture: amd64\n'
+                'Maintainer: YUNTV Demo Contributors\n'
+                'Homepage: https://github.com/AyanoKyouji/BeefTV\nSection: graphics\nPriority: optional\n'
                 'Depends: libgtk-3-0t64, libwebkit2gtk-4.1-0, gstreamer1.0-plugins-good, '
                 'gstreamer1.0-plugins-bad, gstreamer1.0-libav, ffmpeg, fonts-noto-cjk\n'
-                'Description: BeefTV creative workspace (Ubuntu 24.04)\n')
+                'Description: YUNTV creative workspace (Ubuntu 24.04)\n')
             applications = stage / 'usr/share/applications'
             applications.mkdir(parents=True)
-            (applications / 'beeftv.desktop').write_text(
-                '[Desktop Entry]\nType=Application\nName=BeefTV\n'
-                'Exec=/opt/beeftv/BeefTV-linux/BeefTV\nIcon=beeftv\n'
-                'Terminal=false\nCategories=Graphics;AudioVideo;\nStartupWMClass=BeefTV\n')
+            (applications / 'yuntv.desktop').write_text(
+                '[Desktop Entry]\nType=Application\nName=YUNTV\n'
+                'Exec=/opt/yuntv/YUNTV-linux/YUNTV\nIcon=yuntv\n'
+                'Terminal=false\nCategories=Graphics;AudioVideo;\nStartupWMClass=YUNTV\n')
             icons = stage / 'usr/share/pixmaps'
             icons.mkdir(parents=True)
-            shutil.copy2(ROOT / 'assets/app-icon.png', icons / 'beeftv.png')
+            shutil.copy2(ROOT / 'assets/app-icon.png', icons / 'yuntv.png')
             bins = stage / 'usr/bin'
             bins.mkdir(parents=True)
-            (bins / 'beeftv').symlink_to('/opt/beeftv/BeefTV-linux/cli/beeftv')
+            (bins / 'yuntv').symlink_to('/opt/yuntv/YUNTV-linux/cli/yuntv')
             # copytree keeps build modes, including Node and bundled CLI executables.
             for path in stage.rglob('*'):
                 if path.is_dir():
@@ -87,9 +87,9 @@ def main():
     payload = args.input or ROOT / 'backend/cmd/desktop/build/bin'
     if not args.input:
         if args.platform.startswith('darwin-'):
-            payload /= 'BeefTV.app'
+            payload /= 'YUNTV.app'
         elif args.platform == 'linux-amd64':
-            payload /= 'BeefTV-linux'
+            payload /= 'YUNTV-linux'
     package(args.version, args.platform, payload, args.output_dir / installer_name(args.version, args.platform))
 
 

@@ -1,101 +1,42 @@
 <p align="center">
-  <img src="assets/readme/beeftv-wordmark.svg" width="640" alt="BeefTV — High-performance, lightweight, AI-native video workspace">
+  <img src="assets/yuntv-wordmark.svg" width="430" alt="YUNTV">
 </p>
 
-<p align="center"><strong>High-performance · Lightweight · AI Native</strong></p>
+<p align="center"><strong>AI 媒体创作工作台 · 本地优先 · Agent 协作</strong></p>
 
-<p align="center">
-  面向 AI 时代的视频创作工作台。<br>
-  在一个自由画布中连接创意、模型与素材。
-</p>
+YUNTV 是基于 [BeefTV](https://github.com/glanderness/BeefTV) 二次开发的 AI 媒体创作 Demo。在无限画布中组织文本、分镜、图片与视频，让用户和 Agent 共同编辑同一份项目内容。
 
-<p align="center">
-  <a href="https://github.com/glanderness/BeefTV/stargazers"><img src="https://img.shields.io/github/stars/glanderness/BeefTV?style=flat-square&amp;logo=github&amp;label=Stars&amp;labelColor=303030&amp;color=E86C36" alt="BeefTV GitHub Stars"></a>
-  <a href="https://github.com/glanderness/BeefTV/releases/latest"><img src="https://img.shields.io/github/v/release/glanderness/BeefTV?style=flat-square&amp;label=Release&amp;labelColor=303030&amp;color=525252" alt="BeefTV 最新版本"></a>
-  <a href="QUICKSTART.md#下载与首次打开"><img src="https://img.shields.io/badge/Desktop-macOS%20%7C%20Windows-525252?style=flat-square&amp;labelColor=303030" alt="桌面版支持 macOS 和 Windows"></a>
-  <a href="QUICKSTART.md"><img src="https://img.shields.io/badge/Workspace-Local--first-525252?style=flat-square&amp;labelColor=303030" alt="本地优先工作区"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-525252?style=flat-square&amp;labelColor=303030" alt="MIT 许可证"></a>
-</p>
-
-<p align="center">
-  <a href="https://beeftv.app/"><img src="assets/readme/button-website.svg" width="180" alt="访问 BeefTV 官网"></a>
-  <a href="https://github.com/glanderness/BeefTV/releases/latest"><img src="assets/readme/button-download.svg" width="175" alt="下载 BeefTV 桌面版"></a>
-  <a href="https://beeftv.app/assets/beeftv-wecom-qr.png"><img src="assets/readme/button-community.svg" width="185" alt="扫码加入 BeefTV 社群"></a>
-  <a href="https://x.com/beefnoode"><img src="assets/readme/button-x.svg" width="180" alt="在 X 关注 @beefnoode"></a>
-</p>
-
-<p align="center">
-  <a href="#产品演示">产品演示</a> ·
-  <a href="docs/content/docs/overview/features.mdx">功能清单</a> ·
-  <a href="QUICKSTART.md">开始使用</a> ·
-  <a href="CONTRIBUTING.md">参与贡献</a>
-</p>
-
-## 产品演示
-
-https://github.com/user-attachments/assets/94fe6a39-6933-44b3-a9a9-dbc28b2d284c
-
-[下载产品演示视频](https://github.com/glanderness/BeefTV/releases/download/v1.5.5/beeftv-demo.mp4)
-
-## Why BeefTV
-
-| High Performance | Lightweight | AI Native |
-| --- | --- | --- |
-| 面向复杂创作画布优化。视口渲染、节点加载、媒体预览与生成任务彼此解耦，让项目增长时仍能保持顺畅操作。 | 以低资源占用和低使用门槛为目标。一个桌面工作区即可开始创作，能力按需加载，追求轻量化 | AI 不是附加按钮，而是工作台中不可或缺的一部分。让Agent真正参与并且主导你的AIGC创作流程。 |
-
-## 一个画布，完整创作链路
-
-- **生成**：从提示词或参考素材生成文字、图片、视频与音频。
-- **组织**：用节点和连线建立素材关系、创作上下文与生成流程。
-- **加工**：继续裁切、标注、局部重绘、拆分、引用和组合结果。
-- **迭代**：保留过程、复用素材，让一次生成变成可持续演进的工作流。
-
-BeefTV 同时提供项目库、个人资产库、异步任务、模型渠道与创作工具。完整范围见[功能清单](docs/content/docs/overview/features.mdx)。
-
-## 工作方式
-
-```text
-想法 / 参考素材
-       ↓
-AI Native 自由画布
-       ↓
-模型 + 创作工具
-       ↓
-文字 / 图片 / 视频 / 音频 / 分镜
-       ↓
-可编辑、可复用、可继续生成的工作流
-```
-
-## Open by design
-
-- 可以自由配置文本、图片、视频与音频模型渠道，不绑定单一 Provider。
-- 项目、画布、素材与任务由统一工作区管理，数据可以本地保存和迁移。
-- 桌面端基于 React、Go 与 Wails，模型协议和工作台能力可继续自定义或者扩展。
+- Agent 按指令创建和修改创作对象，读取最新编辑，按依赖顺序提交生成任务。
+- 支持手动生成、参考图、素材复用、本地保存与恢复。
+- 模型通过已有渠道和声明式协议接入；当前已验证 DeepSeek、FLUX 与 MiniMax H3 的部分实际流程。
+- 日常使用 Mac 原生客户端，Windows 按阶段回归；完整验收状态见 [Demo 项目记录](docs/demo/README.md)。
 
 ## 开始使用
 
-下载桌面版及 Mac 首次打开说明见 [快速开始](QUICKSTART.md#下载与首次打开)。
+本机客户端为 `/Applications/YUNTV.app`，启动后添加自己的模型渠道即可创作。首次安装、更新与 Windows 构建见 [快速开始](QUICKSTART.md) 和 [Mac 客户端说明](docs/demo/development/Mac原生客户端.md)。
+
+在仓库根目录开发：
 
 ```bash
-git clone https://github.com/glanderness/BeefTV.git
-cd BeefTV
-./scripts/build-beeftv-release.sh
+make dev
+make stop
 ```
 
-详细环境要求、Windows 构建与本地开发方式见 [`QUICKSTART.md`](QUICKSTART.md) 和[桌面发布文档](docs/desktop-release.md)。首次启动后，添加自己的模型渠道即可开始创作。
+更新已安装的 Mac 客户端：
 
-## 贡献与许可
+```bash
+./scripts/update-local-beeftv-app.sh
+```
 
-欢迎提交 Issue 和 Pull Request。开发流程与测试要求见 [`CONTRIBUTING.md`](CONTRIBUTING.md)。
+脚本会在新构建及签名校验通过后，将已有 BeefTV 安装更名为 YUNTV。现有工作区继续使用原数据目录，避免品牌调整影响项目、素材或凭证。详细品牌边界见 [YUNTV 品牌说明](docs/demo/development/YUNTV品牌说明.md)。
 
-项目按照 [`LICENSE`](LICENSE) 发布；上游来源、保留声明与第三方归属见 [`NOTICE`](NOTICE)。
+## 文档
 
-## ⭐ Star History
+- [功能清单](docs/content/docs/overview/features.mdx)
+- [需求、执行计划与验收报告](docs/demo/README.md)
+- [本机一键启动](docs/demo/development/本机一键启动.md)
+- [参与开发](CONTRIBUTING.md)
 
-<a href="https://www.star-history.com/?repos=glanderness%2FBeefTV&amp;type=date&amp;legend=bottom-right">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=glanderness/BeefTV&amp;type=date&amp;theme=dark&amp;legend=bottom-right" />
-    <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=glanderness/BeefTV&amp;type=date&amp;legend=bottom-right" />
-    <img alt="BeefTV GitHub Star History" src="https://api.star-history.com/chart?repos=glanderness/BeefTV&amp;type=date&amp;legend=bottom-right" />
-  </picture>
-</a>
+## 来源与许可
+
+本 Demo 基于 BeefTV 及其上游工作开发。原始许可证和版权声明保留于 [LICENSE](LICENSE) 与 [NOTICE](NOTICE)。YUNTV 是本 fork 的 Demo 名称，不代表上游项目或第三方模型服务商。

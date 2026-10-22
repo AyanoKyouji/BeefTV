@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 430 96" fill="none" role="img" aria-labelledby="title desc">
+  <title id="title">YUNTV</title>
+  <desc id="desc">Y monogram with a play symbol and YUNTV wordmark.</desc>
+  <path fill="#111" d="M10 18h18l20 28 20-28h18L57 60v20H39V60L10 18Z"/>
+  <path fill="#111" d="m70 65 16 9-16 9V65Z"/>
+  <text x="113" y="73" fill="#111" font-family="Inter, Arial, sans-serif" font-size="68" font-weight="750" letter-spacing="-3">YUNTV</text>
+</svg>

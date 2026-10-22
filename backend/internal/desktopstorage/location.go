@@ -92,7 +92,7 @@ func saveLocation(root string, location Location) error {
 func canonical(path string) (string, error) {
 	path = strings.TrimSpace(path)
 	if !filepath.IsAbs(path) || filepath.Dir(filepath.Clean(path)) == filepath.Clean(path) {
-		return "", errors.New("请选择磁盘中的文件夹，例如 D:\\BeefTV")
+		return "", errors.New("请选择磁盘中的文件夹，例如 D:\\YUNTV")
 	}
 	path = filepath.Clean(path)
 	missing := []string{}

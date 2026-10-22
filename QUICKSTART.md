@@ -1,55 +1,53 @@
-# BeefTV 本地桌面版快速开始
+# YUNTV 本地桌面版快速开始
 
-BeefTV 桌面版是无需登录的本地优先工作区。项目、画布、素材、任务记录和模型配置默认保存在本机；只有执行生成时，才会按你配置的渠道请求外部模型服务。
+YUNTV 是本地优先的 AI 媒体创作工作台，无需登录。项目、素材、任务和模型配置保存在本机；生成时按所选渠道调用模型服务。
 
-## 下载与首次打开
+## 本机启动与更新
 
-从 [官方发布页](https://github.com/glanderness/BeefTV/releases/latest) 下载对应系统的安装包。Mac 的 Apple 芯片选择 `darwin-arm64`，Intel 芯片选择 `darwin-amd64`；解压后将 `BeefTV.app` 放入「应用程序」。
-
-目前 Mac 版本尚未完成 Apple 开发者签名和公证。首次打开时，如果提示「Apple 无法验证 BeefTV.app 是否包含恶意软件」，请先确认安装包来自官方发布页，再打开「系统设置 → 隐私与安全性」，找到 BeefTV 并点击「仍要打开」，按系统提示确认。受组织管理的 Mac 可能需要联系管理员。
-
-这是 macOS 对未公证应用的检查，换一个下载地址不会消除它。无需关闭整个系统的安全检查。具体操作见 [Apple 的打开应用说明](https://support.apple.com/zh-cn/102445)。
-
-已经能正常打开的旧版本，可在应用内检查更新；更新器会校验更新清单签名和安装包哈希。这些校验不等于 Apple 公证。
-
-## 构建桌面版
-
-环境要求：Go 1.25、Bun，以及 Wails 所需的系统组件。
-
-在仓库根目录执行：
+Mac 正式应用为 `/Applications/YUNTV.app`，在「应用程序」中双击 YUNTV 即可。已安装的 BeefTV 将由本仓库更新脚本更名，现有项目和模型配置继续使用。
 
 ```bash
-BEEFTV_GO_DIR=/path/to/go ./scripts/build-beeftv-release.sh
+./scripts/update-local-beeftv-app.sh
 ```
 
-macOS 应用输出到 `backend/cmd/desktop/build/bin/BeefTV.app`。
+详细工具链与本机已准备环境的命令见 [Mac 客户端说明](docs/demo/development/Mac原生客户端.md)。不要从上游 BeefTV 发布页下载并覆盖 YUNTV；上游包不包含本 Demo 的修改。
 
-Windows amd64 必须在 Windows 本机构建（需要 PATH 中的 Go、Bun，以及编译 go-sqlite3 的 GCC）：
+## 构建
+
+需要 Go、Bun、Node 及 Wails 所需的原生系统组件。Mac 构建入口仍为：
+
+```bash
+./scripts/build-beeftv-release.sh
+```
+
+构建的主程序与应用包使用 YUNTV 名称。本机安装统一通过上面的更新脚本，不保留第二份可用应用。
+
+Windows x64 在 Windows 本机构建，需要 Go、Bun、Node 和 GCC：
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\build-beeftv-windows-release.ps1
 ```
 
-输出为 `backend\cmd\desktop\build\bin\BeefTV.exe`，官方插件在旁边的 `plugin-packages\`。前提与数据目录见 `docs/desktop-release.md`。
+输出主程序为 `backend/cmd/desktop/build/bin/YUNTV.exe`，需与 `agent-host`、`plugin-packages`、`cli` 等完整随包资源一起使用。品牌修改后的 Windows 原生运行需要另行验证。
 
-首次打开后直接进入本地工作区，不需要注册或登录。
-
-## 配置模型
-
-打开“模型配置”。内置 BeefAPI 使用「连接 BeefAPI」，在系统浏览器中完成授权后即可拉取模型。其他渠道仍填写 Base URL 和密钥。密钥保存在本地工作区，不会写入画布、素材或任务列表。
-
-模型请求可能访问外部供应商，但 BeefTV 不会把项目数据同步到 SaaS 存储。素材会先写入本地资源目录，再作为本地资源引用提交给模型渠道。
-
-## 本地开发与验证
-
-Mac 浏览器日常开发可在仓库根目录执行 `make dev`，或双击 `启动开发.command`。执行 `make stop` 停止；更多命令、环境要求与数据目录见[本机一键启动](docs/demo/development/本机一键启动.md)。需要原生 Wails 窗口联调时，可参考 `scripts/beeftv-shared-dev.sh`。验证本地发行边界：
+## 浏览器开发
 
 ```bash
-BEEFTV_GO_DIR=/path/to/go ./scripts/verify-beeftv-local-release.sh
+make dev
+make status
+make logs
+make stop
 ```
 
-## 数据位置与备份
+详见 [一键启动说明](docs/demo/development/本机一键启动.md)。
 
-桌面运行时会在本地工作区保存 SQLite 数据库、资源文件、模型配置和迁移备份。升级迁移前会自动创建数据库备份；如需迁移或恢复，请先退出 BeefTV 并完整复制工作区数据目录。
+## 数据与接入
 
-登录、云存储、团队同步和计费不属于 BeefTV 本地版。以本地能力契约、精简 schema 和发行门禁为准，详见 `docs/local-first-architecture.md`。
+为延续已有工作区，默认数据根目录保持兼容：
+
+- macOS：`~/Library/Application Support/BeefTV`
+- Windows：`%AppData%/BeefTV`
+
+自定义存储位置沿用原设置。不要为更名手动移动或清空这些目录。
+
+设置中的外部 Agent 连接使用随包 `cli/yuntv`（Windows 为 `cli/yuntv.exe`）；应用路径变更后，可在「YUNTV MCP」中重新复制连接配置。原有 `BEEFTV_*` 环境变量与 `.beeftv-plugin` 格式继续有效。

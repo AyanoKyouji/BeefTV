@@ -80,7 +80,7 @@ if [[ -n "${BEEFTV_WAILS_PLATFORM:-}" ]]; then
   esac
 fi
 
-echo "Building BeefTV $VERSION_VALUE ($COMMIT_VALUE)"
+echo "Building YUNTV $VERSION_VALUE ($COMMIT_VALUE)"
 
 mkdir -p "$DESKTOP_DIR/build"
 cp "$ROOT_DIR/assets/app-icon.png" "$DESKTOP_DIR/build/appicon.png"
@@ -105,24 +105,24 @@ cp "$ROOT_DIR/assets/app-icon.png" "$DESKTOP_DIR/build/appicon.png"
 )
 
 if [[ "$AGENT_TARGET" == linux/amd64 ]]; then
-  LINUX_BUNDLE="$DESKTOP_DIR/build/bin/BeefTV-linux"
+  LINUX_BUNDLE="$DESKTOP_DIR/build/bin/YUNTV-linux"
   mkdir -p "$LINUX_BUNDLE/plugin-packages" "$LINUX_BUNDLE/cli"
-  mv "$DESKTOP_DIR/build/bin/BeefTV" "$LINUX_BUNDLE/BeefTV"
+  mv "$DESKTOP_DIR/build/bin/YUNTV" "$LINUX_BUNDLE/YUNTV"
   cp "$ROOT_DIR/plugin-packages/"*.beeftv-plugin "$LINUX_BUNDLE/plugin-packages/"
   cp "$ROOT_DIR/docs/linux-install.md" "$LINUX_BUNDLE/README.md"
   bun "$ROOT_DIR/scripts/package-agent-host.mjs" "$AGENT_TARGET" "$LINUX_BUNDLE/agent-host"
   (
     cd "$ROOT_DIR/backend"
-    go build -trimpath -ldflags "$LDFLAGS" -o "$LINUX_BUNDLE/cli/beeftv" ./cmd/beeftv
+    go build -trimpath -ldflags "$LDFLAGS" -o "$LINUX_BUNDLE/cli/yuntv" ./cmd/beeftv
   )
-  chmod 755 "$LINUX_BUNDLE/BeefTV" "$LINUX_BUNDLE/cli/beeftv"
+  chmod 755 "$LINUX_BUNDLE/YUNTV" "$LINUX_BUNDLE/cli/yuntv"
   echo "Release bundle: $LINUX_BUNDLE"
   exit 0
 fi
 
 # Official protocol packages are runtime dependencies. Finder launches use the
 # bundle Resources directory and must never depend on the caller's cwd.
-APP_BUNDLE="$DESKTOP_DIR/build/bin/BeefTV.app"
+APP_BUNDLE="$DESKTOP_DIR/build/bin/YUNTV.app"
 PLUGIN_RESOURCE_DIR="$APP_BUNDLE/Contents/Resources/plugin-packages"
 mkdir -p "$PLUGIN_RESOURCE_DIR"
 cp "$ROOT_DIR/plugin-packages/"*.beeftv-plugin "$PLUGIN_RESOURCE_DIR/"
@@ -140,9 +140,9 @@ fi
 # app must carry it -- PATH is not a prerequisite.
 #
 # It goes in Contents/MacOS/cli, not directly next to the app binary: macOS
-# volumes are case-insensitive by default, so a file named beeftv beside BeefTV
+# volumes are case-insensitive by default, so a file named beeftv beside YUNTV
 # is the same file and would overwrite the app binary.
-CLI_BINARY="$APP_BUNDLE/Contents/MacOS/cli/beeftv"
+CLI_BINARY="$APP_BUNDLE/Contents/MacOS/cli/yuntv"
 mkdir -p "$(dirname "$CLI_BINARY")"
 (
   cd "$ROOT_DIR/backend"
@@ -170,6 +170,9 @@ if [[ -f "$APP_PLIST" ]] && command -v plutil >/dev/null 2>&1; then
   MACOS_VERSION="${VERSION_VALUE#v}"
   plutil -replace CFBundleShortVersionString -string "$MACOS_VERSION" "$APP_PLIST"
   plutil -replace CFBundleVersion -string "$MACOS_VERSION" "$APP_PLIST"
+  plutil -replace CFBundleDisplayName -string "YUNTV" "$APP_PLIST"
+  # Retain the existing WebView profile when updating the local Demo brand.
+  plutil -replace CFBundleIdentifier -string "com.wails.beeftv" "$APP_PLIST"
 fi
 
 # The plist edit and the bundled CLI both invalidate Wails' ad-hoc signature;

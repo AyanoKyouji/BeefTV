@@ -1,10 +1,10 @@
-# AI 媒体创作 Demo 项目
+# YUNTV AI 媒体创作 Demo 项目
 
 本目录是 Demo 需求、方案、任务与执行报告的唯一版本管理入口，随 `demo/ai-media` 分支维护。早期工作区外层 `docs/` 的文字文件在原开发机上保留为兼容别名，后续直接编辑本目录。
 
 ## 当前进度
 
-最新结果：按用户要求先使用 Mac 客户端，[原生构建与基础验证](development/reports/MAC-NATIVE_20261021.md)完成，应用已安装至 `/Applications/BeefTV.app` 并打开常规工作区。签名/资源、宿主、正式业务接口与受控终止后的离线恢复通过；GUI 由用户确认正常，自动化读取超时，未调用真实模型或完成原生 E2E。使用见[Mac 客户端说明](development/Mac原生客户端.md)。此前 [Windows 交接准备](development/reports/WINDOWS-FINAL-PREP_20261021.md)保留，按用户要求延后执行。历史 Mac 功能证据 11 项覆盖/1 项 Windows 专属不是最终通过率；后续先在原生客户端补业务验证，最终 AT/平台范围见[阶段六核对](development/reports/STAGE-6_Acceptance-Audit_20261021.md)及[跨平台约定](development/开发与跨平台验证约定.md)。
+最新结果：按用户要求先使用 Mac 客户端，[原生构建与基础验证](development/reports/MAC-NATIVE_20261021.md)完成，应用已安装至 `/Applications/YUNTV.app` 并打开常规工作区。签名/资源、宿主、正式业务接口与受控终止后的离线恢复通过；GUI 由用户确认正常，自动化读取超时，未调用真实模型或完成原生 E2E。使用见[Mac 客户端说明](development/Mac原生客户端.md)。此前 [Windows 交接准备](development/reports/WINDOWS-FINAL-PREP_20261021.md)保留，按用户要求延后执行。历史 Mac 功能证据 11 项覆盖/1 项 Windows 专属不是最终通过率；后续先在原生客户端补业务验证，最终 AT/平台范围见[阶段六核对](development/reports/STAGE-6_Acceptance-Audit_20261021.md)及[跨平台约定](development/开发与跨平台验证约定.md)。
 
 2026-10-21 独立复测补注：DEV-012～017 已按本地代码重新检查。DEV-015/016 的进程恢复补测发现提交未知状态丢失，已修复并在 Mac 实测；快照采集器漏检已修复为全文档摘要对照。**旧 DEV-017 Windows 产物不包含本次后端修复，修复版待重新构建及受影响回归**。以下逐项文字保留原执行结果，最新边界以[复测报告](development/reports/DEV-012-017_Retest_20261021-144414.md)为准；无新增远程模型调用。
 

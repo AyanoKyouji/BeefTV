@@ -181,7 +181,7 @@ export function CanvasAssistantSidebar(props: Props) {
         <div className="canvas-assistant-panel" data-canvas-no-zoom>
             <header className="canvas-assistant-header">
                 <div className="canvas-assistant-heading">
-                    <h2>BeefTV Agent</h2>
+                    <h2>YUNTV Agent</h2>
                     <span className="canvas-assistant-activity" role="status" aria-live="polite" data-phase={activity.phase} data-animated={activity.animated}>
                         <Sparkles className="canvas-assistant-activity-icon size-3" aria-hidden="true" />
                         {activity.text}
@@ -333,7 +333,7 @@ export function CanvasAssistantSidebar(props: Props) {
                 closable={false}
                 onClose={() => assistant.setOpen(false)}
                 size="min(380px, 92vw)"
-                aria-label="BeefTV Agent"
+                aria-label="YUNTV Agent"
             >
                 {content}
             </AppDrawer>
@@ -341,7 +341,7 @@ export function CanvasAssistantSidebar(props: Props) {
     }
 
     return (
-        <aside ref={sidebarRef} className="canvas-assistant-sidebar" aria-label="BeefTV Agent" style={{ width: assistant.width, flexBasis: assistant.width }}>
+        <aside ref={sidebarRef} className="canvas-assistant-sidebar" aria-label="YUNTV Agent" style={{ width: assistant.width, flexBasis: assistant.width }}>
             <button
                 type="button"
                 className="canvas-assistant-resize"
