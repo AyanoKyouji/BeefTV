@@ -17,7 +17,7 @@ import { CanvasAssistantAttachments } from "./canvas-assistant-attachments";
 import { ASSISTANT_CONTINUE_PROMPT, ASSISTANT_STARTER_PROMPTS, assistantActivityState, assistantSkillLabel, assistantStatusNotice, assistantVisibleReply } from "./canvas-assistant-copy";
 import { CanvasAssistantComposer } from "./canvas-assistant-composer";
 import { CanvasAssistantReply, CanvasAssistantTurnView, CanvasAssistantUserMessage } from "./canvas-assistant-turn";
-import { ASSISTANT_MAX_WIDTH, ASSISTANT_MIN_WIDTH, dismissedProposalKey, type CanvasAssistantController } from "./use-canvas-assistant";
+import { ASSISTANT_MAX_WIDTH, ASSISTANT_MIN_WIDTH, type CanvasAssistantController } from "./use-canvas-assistant";
 import "./canvas-assistant-sidebar.css";
 
 type Props = {
@@ -129,13 +129,11 @@ export function CanvasAssistantSidebar(props: Props) {
 
     const notice = assistant.status && !assistant.status.available && assistant.status.reason !== "host_starting" ? assistantStatusNotice(assistant.status.reason) : null;
     const latestTurn = assistant.turns.at(-1);
-    const pendingProposal = assistant.turns.some(turn => !assistant.turnStatus[turn.turnId]?.undone && turn.proposals?.some(proposal =>
-        !assistant.handledProposals.has(proposal.proposalId) && !assistant.handledProposals.has(dismissedProposalKey(proposal.proposalId)) && !props.runningProposalIds?.has(proposal.proposalId)));
     const activity = assistantActivityState({
         streaming: assistant.streaming, awaitingReceipt: assistant.awaitingReceipt,
         available: Boolean(assistant.status?.available), historyLoaded: assistant.historyLoaded,
         historyError: Boolean(assistant.historyError), sessionBusy: assistant.sessionBusy,
-        failed: Boolean(assistant.error || latestTurn?.error), pendingProposal,
+        failed: Boolean(assistant.error || latestTurn?.error), pendingProposal: false,
         cancelled: Boolean(latestTurn?.cancelled),
     });
     const activeProposals = assistant.turns.flatMap(turn => turn.proposals || []).filter(proposal => props.runningProposalIds?.has(proposal.proposalId));

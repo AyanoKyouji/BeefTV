@@ -93,6 +93,7 @@ export function collectTurnEffects(turn, opID, result, operationId) {
     case 'canvas.node.bind_asset':
     case 'canvas.node.configure':
     case 'canvas.node.move':
+    case 'canvas.generation.start':
     case 'canvas.task.bind':
       if (result.nodeId) turn.updatedNodeIds.push(String(result.nodeId));
       break;
@@ -158,7 +159,7 @@ export function sessionTitle(turns) {
 // 模型即使编造别的 assetId/canvasId，工具调用也会在共享操作层被 scope_denied 拒绝。
 export function turnContextPrefix({ canvasId, selectedNodeIds = [], references = [], permissionMode = 'canvas', storyboardContext }) {
   const parts = [`当前画布 ${canvasId}`];
-  parts.push(permissionMode==='read-only' ? '只能读取工作区内容，不能修改或生成' : permissionMode==='full-access' ? '可以读取和修改本工作区的画布；付费生成仍需用户确认' : '可修改当前画布，其他画布只读');
+  parts.push(permissionMode==='read-only' ? '只能读取工作区内容，不能修改或生成' : permissionMode==='full-access' ? '可以读取和修改本工作区的画布；按用户明确指令直接生成' : '可修改当前画布，其他画布只读');
   const selected = selectedNodeIds.map((id) => String(id)).filter(Boolean);
   if (selected.length > 0) parts.push(`选中对象: ${selected.join(', ')}`);
   const assets = references.filter((item) => item?.kind === 'asset' && item.id).map((item) => String(item.id));

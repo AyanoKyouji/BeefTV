@@ -261,7 +261,7 @@ export function createDurableSessionStore({ sessionRoot, workspaceRoot, getModel
       const selected=tools.filter(t=>byName.has(t.name)).map(t=>({...t,parameters:byName.get(t.name).parameters}));
       entry.toolNames = selected.map((tool) => tool.name);
       registry.install(defineExtension({...operationExtension,tools:selected}));
-      if(entry.root) await entry.root.configure({tools:selected,instructions:`${SYSTEM_PROMPT}\n${mode==='read-only'?'只能读取工作区内容，不能修改或生成。':mode==='full-access'?'可读取和修改本工作区的所有画布。付费生成必须等待用户确认。':'仅修改当前画布；其他画布只读。'}`},CTX);
+      if(entry.root) await entry.root.configure({tools:selected,instructions:`${SYSTEM_PROMPT}\n${mode==='read-only'?'只能读取工作区内容，不能修改或生成。':mode==='full-access'?'可读取和修改本工作区的所有画布，按用户明确指令直接生成。':'仅修改当前画布；其他画布只读。'}`},CTX);
     };
     if (skills) registry.install(defineExtension({ name: 'beeftv.skills.v1', sections: [createSkillCatalogSection({
       readCatalog: (signal) => skills.readCatalog(entry, signal, entry.turn.turnId), cache: entry.skillCatalog })] }));

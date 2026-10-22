@@ -81,6 +81,12 @@ export function assistantActionLabel(tool: string | undefined): string {
             return "读取画布";
         case "canvas.generation.propose":
             return "准备生成";
+        case "canvas.generation.start":
+            return "生成媒体";
+        case "task.get":
+            return "等待生成结果";
+        case "canvas.task.bind":
+            return "保存生成结果";
         default:
             return "改动画布";
     }
@@ -162,6 +168,9 @@ export function assistantLifecycleText(event: { phase: AgentLifecycleEvent["phas
             if (tool === "media_overview" || tool === "media.overview") return "正在浏览素材，确认画面和声音。";
             if (tool === "media_inspect" || tool === "media.inspect") return "正在查看和听取选定片段。";
             if (tool === "media_check" || tool === "media.check") return "正在检查黑屏、音轨和文件信息。";
+            if (tool === "canvas_generation_start" || tool === "canvas.generation.start") return "正在按要求提交生成。";
+            if (tool === "task_get" || tool === "task.get") return "正在等待生成和素材交付，完成后继续下一步。";
+            if (tool === "canvas_task_bind" || tool === "canvas.task.bind") return "正在保存这一步的生成结果。";
             return null;
         }
         case "compaction":
@@ -245,6 +254,11 @@ function assistantActionTarget(call: AgentToolCall): string | null {
             return "create";
         case "canvas.generation.propose":
             return `propose:${Array.isArray(args.nodeIds) ? args.nodeIds.join("|") : ""}`;
+        case "canvas.generation.start":
+            return `generate:${String(args.nodeId ?? "")}`;
+        case "canvas.task.bind":
+        case "task.get":
+            return `task:${String(args.taskId ?? "")}`;
         default:
             return null;
     }

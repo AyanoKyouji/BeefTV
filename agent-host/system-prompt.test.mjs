@@ -10,7 +10,12 @@ test('media policy chooses minimum evidence and never presents frames as watched
 });
 
 test('skills are followed step by step across turns and loaded before acting when they match', () => {
-  for (const instruction of ['之后每一轮都按它的步骤顺序执行', '每次只做当前这一步或这一批', '等用户确认后再做下一步', '数量、画幅、类别', '先用 skill_load 读取该技能', '没做的步骤不能说成已完成']) {
+  for (const instruction of ['之后每一轮都按它的步骤顺序执行', '按依赖自动继续', '用户本轮要求优先', '数量、画幅、类别', '先用 skill_load 读取该技能', '没做的步骤不能说成已完成']) {
     expect(SYSTEM_PROMPT).toContain(instruction);
   }
+});
+
+test('direct generation follows dependencies and respects configured models without confirmation cards',()=>{
+ for(const text of ['canvas_generation_start','task_get','canvas_task_bind','无需面板二次确认','所有需要的分镜图成功交付并绑定后','禁止 Seedance 和 Seedream','不自动重交收费任务']) expect(SYSTEM_PROMPT).toContain(text);
+ expect(SYSTEM_PROMPT).not.toContain('不能直接开始付费');
 });

@@ -1,6 +1,7 @@
 package operations
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"encoding/json"
@@ -10,10 +11,11 @@ import (
 
 	"infinite-canvas/backend/internal/canvas"
 	"infinite-canvas/backend/internal/canvas/capability"
+	"infinite-canvas/backend/internal/model"
 )
 
 // RegisterDefaultOps 注册全部对外操作（手工 UI、CLI、MCP 与内置助手共用）。
-// 付费生成只经 canvas.generation.propose 提议、由界面确认后执行；
+// 内置助手按用户明确指令经 canvas.generation.start 提交，旧提议保留供历史界面使用；
 // 未经参数与费用风险验收的能力明确不注册，而不是提供 stub 伪成功。
 func RegisterDefaultOps(r *Registry) {
 	registerCanvasEditOps(r)
@@ -25,6 +27,7 @@ func RegisterDefaultOps(r *Registry) {
 	registerCanvasTimelineOps(r)
 	registerCanvasRenderOps(r)
 	registerCanvasNodeConfigureOps(r)
+	registerCanvasGenerationOps(r)
 	r.Register(Op{AssistantCanvas: true, ID: "canvas.get", Summary: "读取指定画布的完整内容（节点与连线）", ReadOnly: true, Scope: ScopeCanvas,
 		Params:  json.RawMessage(`{"type":"object","properties":{"canvasId":{"type":"string"}},"required":["canvasId"]}`),
 		Handler: opCanvasGet})
@@ -36,7 +39,7 @@ func RegisterDefaultOps(r *Registry) {
 		Handler: opAssetList})
 	r.Register(assetGetOperation())
 	r.Register(Op{AssistantCanvas: true, ID: "task.get", Summary: "按 ID 查询任务状态与产物引用", ReadOnly: true, Scope: ScopeWorkspaceRead,
-		Params:  json.RawMessage(`{"type":"object","properties":{"taskId":{"type":"string"}},"required":["taskId"]}`),
+		Params:  json.RawMessage(`{"type":"object","properties":{"taskId":{"type":"string"},"waitMs":{"type":"integer","minimum":0,"maximum":20000,"description":"等待状态变化，最多20秒；仍在运行则继续查询原任务，不创建新任务"}},"required":["taskId"]}`),
 		Handler: opTaskGet})
 	r.Register(Op{ReplaySafe: true, AssistantCanvas: true, ID: "canvas.node.update", Summary: "局部修改一个节点（只提交目标字段，其余数据保持原样，带 revision CAS）", Scope: ScopeCanvas,
 		Params:  json.RawMessage(`{"type":"object","properties":{"canvasId":{"type":"string"},"nodeId":{"type":"string"},"expectedRevision":{"type":"integer"},"patch":{"type":"object","properties":{"title":{"type":"string"},"prompt":{"type":"string"},"content":{"type":"string"}}}},"required":["canvasId","nodeId","patch","expectedRevision"]}`),
@@ -318,6 +321,7 @@ func opAssetGet(ctx *Context, params json.RawMessage) (any, error) {
 func opTaskGet(ctx *Context, params json.RawMessage) (any, error) {
 	var args struct {
 		TaskID string `json:"taskId"`
+		WaitMs int    `json:"waitMs"`
 	}
 	if err := decodeParams(params, &args); err != nil {
 		return nil, err
@@ -332,11 +336,55 @@ func opTaskGet(ctx *Context, params json.RawMessage) (any, error) {
 	if task == nil {
 		return nil, NotFound("task_not_found", "任务不存在")
 	}
+	if args.WaitMs < 0 || args.WaitMs > 20000 {
+		return nil, InvalidArg("invalid_params", "waitMs 必须是 0..20000")
+	}
+	deadline := time.Now().Add(time.Duration(args.WaitMs) * time.Millisecond)
+	waitContext := ctx.Context
+	if waitContext == nil {
+		waitContext = context.Background()
+	}
+	for args.WaitMs > 0 && generationTaskAwaitingDelivery(task) && time.Now().Before(deadline) {
+		select {
+		case <-waitContext.Done():
+			return nil, waitContext.Err()
+		case <-time.After(time.Second):
+		}
+		task, err = ctx.Domain.Task(ctx.UserID, args.TaskID)
+		if err != nil {
+			return nil, mapDomainError(err)
+		}
+		if task == nil {
+			return nil, NotFound("task_not_found", "任务不存在")
+		}
+	}
 	return map[string]any{
 		"taskId": task.ID, "type": task.Type, "status": task.Status, "progress": task.Progress,
 		"outputs": task.Outputs, "resultState": task.ResultState,
+		"stage": task.Stage, "error": task.Error,
 		"createdAt": task.CreatedAt, "updatedAt": task.UpdatedAt,
 	}, nil
+}
+
+func generationTaskAwaitingDelivery(task *model.Task) bool {
+	if task.Status == "queued" || task.Status == "running" {
+		return true
+	}
+	if task.Status != "succeeded" {
+		return false
+	}
+	if task.Stage == "delivery_paused" || task.Stage == "delivery_timed_out" {
+		return false
+	}
+	if len(task.Outputs) == 0 {
+		return true
+	}
+	for _, output := range task.Outputs {
+		if output.MaterializedAssetID == "" && output.MaterializationErrorCode == "" {
+			return true
+		}
+	}
+	return false
 }
 
 func canvasRevision(doc map[string]any) int64 {

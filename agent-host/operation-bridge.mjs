@@ -81,7 +81,7 @@ export function createOperationBridge({
 
   function buildTools(canvasId, log, generation, turn, identityPrefix) {
     const mode = generation.permissionMode || 'canvas';
-    return [...descriptors.entries()].filter(([,d]) => Array.isArray(d.assistantModes) && d.assistantModes.includes(mode)).map(([toolName, descriptor]) => ({
+    return [...descriptors.entries()].filter(([,d]) => d.id !== 'canvas.generation.propose' && Array.isArray(d.assistantModes) && d.assistantModes.includes(mode)).map(([toolName, descriptor]) => ({
       name: toolName,
       label: descriptor.id,
       readOnly: descriptor.readOnly === true,

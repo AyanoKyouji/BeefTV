@@ -67,10 +67,11 @@ function buttons(html: string) {
 }
 
 describe("撤销后的生成建议不再可用", () => {
-    test("未撤销时仍提供生成与先不用", () => {
+    test("历史方案只读展示，新的生成通过 Agent 指令执行", () => {
         const labels = buttons(render(proposalTurn));
-        expect(labels).toContain("生成");
-        expect(labels).toContain("先不用");
+        expect(labels).not.toContain("生成");
+        expect(labels).not.toContain("先不用");
+        expect(render(proposalTurn)).toContain("发送消息让助手继续即可");
     });
     test("撤销后未开始的建议只说明不会生成，没有按钮", () => {
         const html = render(proposalTurn, { undone: true });

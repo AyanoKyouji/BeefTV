@@ -224,6 +224,51 @@
     "replay": "safe"
   },
   {
+    "id": "canvas.generation.start",
+    "summary": "按用户指令直接生成当前节点的图片或视频，可能计费；读取最新草稿与已就绪参考素材，返回真实任务；必须查询成功并绑定后再做依赖步骤。仅移动节点不影响生成",
+    "readOnly": false,
+    "scope": "canvas",
+    "params": {
+      "additionalProperties": false,
+      "properties": {
+        "canvasId": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "image",
+            "video"
+          ],
+          "type": "string"
+        },
+        "nodeId": {
+          "type": "string"
+        },
+        "operationId": {
+          "description": "调用方生成的稳定幂等键；重试同一操作必须复用同一个值，服务端据此回读原结果",
+          "type": "string"
+        },
+        "prompt": {
+          "description": "刚读取的目标节点完整可编辑提示词，必须与当前草稿一致",
+          "type": "string"
+        }
+      },
+      "required": [
+        "canvasId",
+        "nodeId",
+        "kind",
+        "prompt",
+        "operationId"
+      ],
+      "type": "object"
+    },
+    "assistantModes": [
+      "full-access",
+      "canvas"
+    ],
+    "replay": "safe"
+  },
+  {
     "id": "canvas.get",
     "summary": "读取指定画布的完整内容（节点与连线）",
     "readOnly": true,
@@ -1615,6 +1660,12 @@
       "properties": {
         "taskId": {
           "type": "string"
+        },
+        "waitMs": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20000,
+          "description": "等待状态变化，最多20秒；仍在运行则继续查询原任务，不创建新任务"
         }
       },
       "required": [

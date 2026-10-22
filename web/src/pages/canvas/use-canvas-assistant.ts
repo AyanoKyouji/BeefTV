@@ -423,6 +423,7 @@ export function useCanvasAssistant({ canvasId, onCanvasChanged, beforeSend }: Op
                     if (!userScopeMatches(expectedScope)) return;
                     const current = runFor(targetCanvas);
                     current.lifecycleNotice = assistantLifecycleText(event);
+                    if (event.phase === "tool_end" && event.success !== false) onCanvasChangedRef.current?.(targetCanvas, []);
                     rerenderIfActive(targetCanvas);
                 },
                 onTurnEnd: (end) => {

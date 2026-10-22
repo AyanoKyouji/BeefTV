@@ -213,7 +213,7 @@ func (s *Service) ScopeForHost(userID, turnID string) (Scope, bool, error) {
 		return Scope{}, false, err
 	}
 	for _, receipt := range receipts {
-		if receipt.Op != "canvas.timeline.render" {
+		if receipt.Op != "canvas.timeline.render" && receipt.Op != "canvas.generation.start" {
 			continue
 		}
 		var result struct {

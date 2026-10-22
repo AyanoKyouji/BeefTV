@@ -118,7 +118,7 @@ func changeFromReceipts(record Record, receipts []model.AgentOpRecord) (*Change,
 		case "canvas.node.delete", "canvas.edge.delete":
 			change.DeletedNodeIDs = uniqueSorted(append(change.DeletedNodeIDs, stringItems(item.payload["deletedNodeIds"])...))
 			change.DeletedEdgeIDs = uniqueSorted(append(change.DeletedEdgeIDs, stringItems(item.payload["deletedEdgeIds"])...))
-		case "canvas.node.update", "canvas.node.bind_asset", "canvas.node.configure", "canvas.node.move", "canvas.task.bind",
+		case "canvas.node.update", "canvas.node.bind_asset", "canvas.node.configure", "canvas.node.move", "canvas.task.bind", "canvas.generation.start",
 			"canvas.script.rows.append", "canvas.script.row.update", "canvas.script.row.remove":
 			if item.op == "canvas.script.row.remove" || item.op == "canvas.script.row.update" {
 				change.DeletedEdgeIDs = uniqueSorted(append(change.DeletedEdgeIDs, stringItems(item.payload["deletedEdgeIds"])...))

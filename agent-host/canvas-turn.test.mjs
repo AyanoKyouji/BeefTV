@@ -139,9 +139,9 @@ describe("付费生成提议", () => {
             model: "wan3.0-video", modelKey: "beefapi::wan3.0-video", note: "两段镜头" }]);
     });
 
-    test("系统提示词必须禁止宣称已生成，并指向提议工具", () => {
-        expect(SYSTEM_PROMPT).toContain("canvas_generation_propose");
-        expect(SYSTEM_PROMPT).toContain("不能直接开始付费图片或视频生成");
+    test("系统提示词直接生成并以真实交付判断完成", () => {
+        expect(SYSTEM_PROMPT).toContain("canvas_generation_start");
+        expect(SYSTEM_PROMPT).toContain("任务提交不等于生成完成");
     });
 
     test("系统提示词用 content 改可编辑提示词，未改字段不要提交", () => {
