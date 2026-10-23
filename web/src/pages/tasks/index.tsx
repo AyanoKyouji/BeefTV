@@ -62,7 +62,7 @@ function taskStatusFilter(value: string | null): TaskStatusFilter {
 }
 
 export default function TasksPage() {
-    const { message, modal } = App.useApp();
+    const { message } = App.useApp();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const effectiveConfig = useEffectiveConfig();
@@ -348,9 +348,7 @@ export default function TasksPage() {
             const portraitError = portraitTaskRetryError(detail.inputJson, detail.model);
             if (portraitError) throw new Error(portraitError);
             const warning = seedanceTaskRetryWarning(detail.inputJson, detail.model);
-            if (warning && !(await new Promise<boolean>((resolve) => {
-                modal.confirm({ ...warning, centered: true, onOk: () => resolve(true), onCancel: () => resolve(false), afterClose: () => resolve(false) });
-            }))) return;
+            if (warning) message.warning({ content: `${warning.title}：${warning.content}`, duration: 6 });
             const next = await retryGenerationTask(id);
             setTasks((items) => items.map((item) => (item.id === id ? next : item)));
             setDetailTask((current) => (current?.id === id ? { ...current, ...next } : current));

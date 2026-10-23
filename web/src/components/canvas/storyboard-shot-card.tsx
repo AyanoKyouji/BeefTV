@@ -4,11 +4,12 @@ import { Image as ImageIcon, Film, Pencil, LocateFixed, Square } from "lucide-re
 import { StoryboardAssetsCell, StoryboardMediaPreview } from "@/components/canvas/storyboard-assets-cell";
 import type { StoryboardPipelineRow, StoryboardPipelineItemState } from "@/lib/canvas/canvas-storyboard-progress";
 import { generationErrorMessage } from "@/lib/generation-error";
+import { storyboardMediaBusy } from "@/lib/canvas/canvas-storyboard-generation-state";
 import type { CanvasGenerationBatchItem, CanvasNodeData, StoryboardRow } from "@/types/canvas";
 
 function mediaStatus(state: StoryboardPipelineItemState, node?: CanvasNodeData, item?: CanvasGenerationBatchItem) {
     if (state === "success") return "已完成";
-    if (item?.submissionUncertain) return "状态待确认";
+    if (item?.submissionUncertain || node?.metadata?.generationSubmissionState === "unknown") return "状态待确认";
     if (item?.status === "waiting") return "等待执行";
     if (item?.status === "submitting") return "提交中";
     if (item?.status === "queued") return "排队中";
@@ -17,11 +18,10 @@ function mediaStatus(state: StoryboardPipelineItemState, node?: CanvasNodeData, 
     return { missing: "未生成", idle: "待生成", loading: "生成中", success: "已完成", error: "失败" }[state];
 }
 
-export function StoryboardShotCard({ item, nodes, batchItem, batchMode, disabled, selected, reorderable, onEdit, onGenerateImages, onGenerateVideos, onCancel, onLocate }: {
+export function StoryboardShotCard({ item, nodes, videoInputMode, disabled, selected, reorderable, onEdit, onGenerateImages, onGenerateVideos, onCancel, onLocate }: {
     item: StoryboardPipelineRow;
     nodes: CanvasNodeData[];
-    batchItem?: CanvasGenerationBatchItem;
-    batchMode?: string;
+    videoInputMode?: "direct" | "keyframe";
     disabled: boolean;
     selected?: boolean;
     reorderable?: boolean;
@@ -32,9 +32,24 @@ export function StoryboardShotCard({ item, nodes, batchItem, batchMode, disabled
     onLocate: (node: CanvasNodeData) => void;
 }) {
     const { row, imageNode, videoNode, imageState, videoState } = item;
-    const imageBatchItem = batchMode === "storyboard_image" ? batchItem : undefined;
-    const videoBatchItem = batchMode === "storyboard_video" ? batchItem : undefined;
-    const activeNode = imageState === "loading" ? imageNode : videoState === "loading" ? videoNode : undefined;
+    const { imageBatchItem, videoBatchItem } = item;
+    const imageBusy = imageState === "loading" || storyboardMediaBusy(imageNode, imageBatchItem);
+    const videoBusy = videoState === "loading" || storyboardMediaBusy(videoNode, videoBatchItem);
+    const needsFirstFrame = videoInputMode === "keyframe" && !imageNode?.metadata?.content;
+    const mediaAction = (kind: "image" | "video") => {
+        const node = kind === "image" ? imageNode : videoNode;
+        const state = kind === "image" ? imageState : videoState;
+        const busy = kind === "image" ? imageBusy : videoBusy;
+        const batchItem = kind === "image" ? imageBatchItem : videoBatchItem;
+        const label = kind === "image" ? "图片" : "视频";
+        const canCancel = busy && node && (node.metadata?.status === "loading" || Boolean(node.metadata?.taskId || node.metadata?.taskClientOperationId));
+        if (canCancel) return <Button size="small" icon={<Square className="size-3" />} onClick={() => onCancel(node)}>取消{label}</Button>;
+        return <Button size="small" icon={kind === "image" ? <ImageIcon className="size-3" /> : <Film className="size-3" />} disabled={disabled || busy || (kind === "video" && needsFirstFrame)}
+            title={kind === "video" && needsFirstFrame ? "先做首帧模式需要该镜头已有分镜图" : undefined}
+            onClick={kind === "image" ? onGenerateImages : onGenerateVideos}>
+            {busy ? `${label}${mediaStatus(state, node, batchItem)}` : `${state === "success" ? "重新生成" : state === "error" ? "重试" : "生成"}${label}`}
+        </Button>;
+    };
     const failedNode = imageState === "error" ? imageNode : videoState === "error" ? videoNode : undefined;
     const error = failedNode?.metadata?.errorDetails;
     const description = row.plotDescription || row.imageGenerationPrompt || row.videoMotionPrompt || "还没有画面描述，点击编辑镜头。";
@@ -72,11 +87,8 @@ export function StoryboardShotCard({ item, nodes, batchItem, batchMode, disabled
                     <span className={imageState === "error" ? "text-destructive" : "text-foreground/55"}>图片：{mediaStatus(imageState, imageNode, imageBatchItem)}</span>
                     <span className={videoState === "error" ? "text-destructive" : "text-foreground/55"}>视频：{mediaStatus(videoState, videoNode, videoBatchItem)}</span>
                     <span className="min-w-0 flex-1" />
-                    {activeNode ? <Button size="small" icon={<Square className="size-3" />} onClick={() => onCancel(activeNode)}>取消</Button> : <>
-                        {imageState !== "success" ? <Button size="small" icon={<ImageIcon className="size-3" />} disabled={disabled} onClick={onGenerateImages}>{imageState === "error" ? "重试图片" : "生成图片"}</Button> : null}
-                        {videoState !== "success" ? <Button size="small" icon={<Film className="size-3" />} disabled={disabled} onClick={onGenerateVideos}>{videoState === "error" ? "重试视频" : "生成视频"}</Button> : null}
-                        {videoState === "success" ? <Button size="small" onClick={onEdit}>查看视频</Button> : null}
-                    </>}
+                    {mediaAction("image")}
+                    {mediaAction("video")}
                 </div>
                 {error ? <p className="truncate text-xs text-destructive" title={generationErrorMessage(error)}>{generationErrorMessage(error)}</p> : null}
             </div>

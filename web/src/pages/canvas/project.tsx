@@ -84,6 +84,7 @@ import { libtvOriginalEdgeEndpoints } from "@/lib/canvas/libtv-original-edges";
 import { stampCanvasNodeChanges } from "@/lib/canvas/canvas-node-timestamps";
 import { batchSourceRestriction } from "@/lib/canvas/canvas-batch-connection";
 import { deriveStoryboardPipelineProgress } from "@/lib/canvas/canvas-storyboard-progress";
+import { storyboardMediaModelPatch, storyboardMediaSettingsPatch } from "@/lib/canvas/canvas-storyboard-models";
 import { CanvasSyncStatus } from "./canvas-sync-status";
 import { CanvasVersionHistory, useCanvasVersionHistory } from "./canvas-version-history";
 import { CanvasVersionPreview } from "./canvas-version-preview";
@@ -2253,9 +2254,14 @@ function InfiniteCanvasPage() {
                         onLocate={(node) => focusCanvasNode(node.id)}
                         onCreateImageNodes={() => createScriptImageNodes(contentNode.id)}
                         onCreateVideoNodes={() => createScriptVideoNodes(contentNode.id)}
-                        onGenerateImages={(rowIds) => void generateScriptImages(contentNode.id, rowIds)}
-                        onGenerateVideos={(rowIds) => (contentNode.metadata?.storyboardVideoInputMode === "keyframe" ? void generateScriptVideos(contentNode.id, rowIds) : void createAndGenerateScriptVideos(contentNode.id, rowIds))}
+                        onGenerateImages={(rowIds, regenerate) => void generateScriptImages(contentNode.id, rowIds, regenerate)}
+                        onGenerateVideos={(rowIds, regenerate) => (contentNode.metadata?.storyboardVideoInputMode === "keyframe" ? void generateScriptVideos(contentNode.id, rowIds, regenerate) : void createAndGenerateScriptVideos(contentNode.id, rowIds, regenerate))}
                         onVideoInputModeChange={(storyboardVideoInputMode) => handleConfigNodeChange(contentNode.id, { storyboardVideoInputMode })}
+                        onMediaModelChange={(kind, model) => handleConfigNodeChange(contentNode.id, storyboardMediaModelPatch(kind, model))}
+                        onMediaSettingsChange={(kind, patch) => {
+                            const current = nodesRef.current.find((node) => node.id === contentNode.id);
+                            if (current) handleConfigNodeChange(current.id, storyboardMediaSettingsPatch(current, kind, patch));
+                        }}
                         onMergeVideos={() => void mergeVideosByIds(pipeline.successfulVideoNodeIds)}
                         onCreateActionBoards={() => void createScriptActionBoards(contentNode.id)}
                         onRetryBatch={(batchId) => retryFailedBatchItems(contentNode.id, batchId)}
@@ -3289,16 +3295,23 @@ function InfiniteCanvasPage() {
                                         ),
                                     );
                                 },
-                                onGenerateImages: (rowIds) => {
-                                    if (activeScriptNode) void generateScriptImages(activeScriptNode.id, rowIds);
+                                onGenerateImages: (rowIds, regenerate) => {
+                                    if (activeScriptNode) void generateScriptImages(activeScriptNode.id, rowIds, regenerate);
                                 },
-                                onGenerateVideos: (rowIds) => {
+                                onGenerateVideos: (rowIds, regenerate) => {
                                     if (!activeScriptNode) return;
-                                    if (activeScriptNode.metadata?.storyboardVideoInputMode === "keyframe") void generateScriptVideos(activeScriptNode.id, rowIds);
-                                    else void createAndGenerateScriptVideos(activeScriptNode.id, rowIds);
+                                    if (activeScriptNode.metadata?.storyboardVideoInputMode === "keyframe") void generateScriptVideos(activeScriptNode.id, rowIds, regenerate);
+                                    else void createAndGenerateScriptVideos(activeScriptNode.id, rowIds, regenerate);
                                 },
                                 onVideoInputModeChange: (storyboardVideoInputMode) => {
                                     if (activeScriptNode) handleConfigNodeChange(activeScriptNode.id, { storyboardVideoInputMode });
+                                },
+                                onMediaModelChange: (kind, model) => {
+                                    if (activeScriptNode) handleConfigNodeChange(activeScriptNode.id, storyboardMediaModelPatch(kind, model));
+                                },
+                                onMediaSettingsChange: (kind, patch) => {
+                                    const current = nodesRef.current.find((node) => node.id === activeScriptNode?.id);
+                                    if (current) handleConfigNodeChange(current.id, storyboardMediaSettingsPatch(current, kind, patch));
                                 },
                             }}
                             director={{

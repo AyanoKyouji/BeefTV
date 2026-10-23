@@ -85,19 +85,20 @@ export function useCanvasGenerationBatches({ projectId, projectLoaded, nodes, no
                 createdAt: now,
                 updatedAt: now,
             };
-            setNodes((current) =>
-                current.map((node) =>
-                    node.id === sourceNodeId
-                        ? {
-                              ...node,
-                              metadata: {
-                                  ...node.metadata,
-                                  generationBatches: [...(node.metadata?.generationBatches || []), batch].slice(-MAX_BATCH_HISTORY),
-                              },
-                          }
-                        : node,
-                ),
+            const nextNodes = nodesRef.current.map((node) =>
+                node.id === sourceNodeId
+                    ? {
+                          ...node,
+                          metadata: {
+                              ...node.metadata,
+                              generationBatches: [...(node.metadata?.generationBatches || []), batch].filter((entry, index, all) => index >= all.length - MAX_BATCH_HISTORY || entry.items.some(item => ["waiting", "submitting", "queued", "running"].includes(item.status))),
+                          },
+                      }
+                    : node,
             );
+            // Reserve synchronously so another shot click sees this batch before React renders.
+            nodesRef.current = nextNodes;
+            setNodes(nextNodes);
             return batch.id;
         },
         [message, nodesRef, projectId, setNodes],
@@ -171,6 +172,9 @@ export function useCanvasGenerationBatches({ projectId, projectLoaded, nodes, no
                 (sourceNode.metadata?.generationBatches || []).some((batch) => batch.projectId === projectId && batch.status !== "completed" && batch.status !== "cancelled" && batch.items.some((item) => item.status === "waiting")),
             );
             if (!hasWaitingItems) return;
+            const savedItemKeys = new Set(nodesRef.current.flatMap(source => (source.metadata?.generationBatches || [])
+                .filter(batch => batch.projectId === projectId)
+                .flatMap(batch => batch.items.filter(item => item.status === "waiting").map(item => batchItemKey(batch.id, item.id)))));
 
             try {
                 await flushCanvasProject(projectId, signal);
@@ -214,7 +218,8 @@ export function useCanvasGenerationBatches({ projectId, projectLoaded, nodes, no
                         ? Math.max(0, batch.concurrency - batch.items.filter((item) => ["submitting", "queued", "running"].includes(item.status)).length)
                         : Number.POSITIVE_INFINITY;
                     for (const item of batch.items) {
-                        if (item.status !== "waiting" || availableSlots <= 0 || batchAvailableSlots <= 0) continue;
+                        // New clicks during the save wait for their own save cycle.
+                        if (item.status !== "waiting" || !savedItemKeys.has(batchItemKey(batch.id, item.id)) || availableSlots <= 0 || batchAvailableSlots <= 0) continue;
                         const node = nodeById.get(item.nodeId);
                         if (!node) continue;
                         // 已绑定任务或已有成品的节点交给恢复/对账链路处理，绝不重复提交。
@@ -246,7 +251,6 @@ export function useCanvasGenerationBatches({ projectId, projectLoaded, nodes, no
                 void handleGenerateNode(node.id, generationMode, prompt, {
                     controller,
                     waitForTaskCapacity: true,
-                    skipDuplicateConfirmation: true,
                     retryContext:
                         node.metadata?.retryOf && node.metadata.attemptGroupId && node.metadata.taskClientOperationId
                             ? { retryOf: node.metadata.retryOf, attemptGroupId: node.metadata.attemptGroupId, clientOperationId: node.metadata.taskClientOperationId }

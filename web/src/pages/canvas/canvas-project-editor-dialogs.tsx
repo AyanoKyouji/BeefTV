@@ -14,6 +14,7 @@ import { CanvasPanoramaConfigModal, type PanoramaGenerateConfig } from "@/compon
 import { CanvasProjectAssetModal } from "@/components/canvas/canvas-project-asset-modal";
 import { CanvasScriptEditor } from "@/components/canvas/canvas-script-node";
 import type { CanvasStoryboardPipelineProgress } from "@/lib/canvas/canvas-storyboard-progress";
+import type { StoryboardMediaSettings } from "@/lib/canvas/canvas-storyboard-models";
 import type { CanvasGenerationBatch } from "@/types/canvas";
 import { CanvasStylePickerModal } from "@/components/canvas/canvas-style-picker-modal";
 import { CanvasSubtitleDialog } from "@/components/canvas/canvas-subtitle-dialog";
@@ -153,9 +154,11 @@ export type CanvasProjectEditorDialogsProps = {
         onClose: () => void;
         onUpdateRows: (rows: StoryboardRow[]) => void;
         onVisibleColumnsChange: (columns: StoryboardColumn[]) => void;
-        onGenerateImages: (rowIds: string[]) => void;
-        onGenerateVideos: (rowIds: string[]) => void;
+        onGenerateImages: (rowIds: string[], regenerate?: boolean) => void;
+        onGenerateVideos: (rowIds: string[], regenerate?: boolean) => void;
         onVideoInputModeChange: (mode: StoryboardVideoInputMode) => void;
+        onMediaModelChange: (kind: "image" | "video", model: string) => void;
+        onMediaSettingsChange: (kind: "image" | "video", patch: StoryboardMediaSettings) => void;
     };
     director: {
         nodeId: string | null;
@@ -319,6 +322,8 @@ export function CanvasProjectEditorDialogs({
                 onGenerateImages={script.onGenerateImages}
                 onGenerateVideos={script.onGenerateVideos}
                 onVideoInputModeChange={script.onVideoInputModeChange}
+                onMediaModelChange={script.onMediaModelChange}
+                onMediaSettingsChange={script.onMediaSettingsChange}
             />
             {director.nodeId && director.scene ? (
                 <Suspense

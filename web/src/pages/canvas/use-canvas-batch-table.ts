@@ -1,4 +1,4 @@
-import { useCallback, type Dispatch, type SetStateAction } from "react";
+import { useCallback, useRef, type Dispatch, type SetStateAction } from "react";
 import { App } from "antd";
 import { nanoid } from "nanoid";
 
@@ -6,8 +6,9 @@ import { NODE_DEFAULT_SIZE } from "@/constant/canvas";
 import { batchInputColumns, batchPromptForRow, batchReferenceColumns, batchReferenceHandleId, createBatchRowsFromColumns, createInheritedBatchRow, moveBatchReferenceCell, removeLastBatchReferenceColumn, reorderBatchReferenceColumns } from "@/lib/canvas/canvas-batch-table";
 import { createCanvasNode } from "@/lib/canvas/canvas-project-domain";
 import { buildGenerationConfig, resetGenerationTaskMetadata } from "@/lib/canvas/canvas-project-generation";
+import { runCanvasGenerationSubmissionOnce } from "@/lib/canvas/canvas-generation-submission";
 import { navigateToSettings } from "@/lib/settings-navigation";
-import { modelDisplayName, useConfigStore, useEffectiveConfig } from "@/stores/use-config-store";
+import { useConfigStore, useEffectiveConfig } from "@/stores/use-config-store";
 import { CanvasNodeType, type CanvasBatchRow, type CanvasBatchTableData, type CanvasConnection, type CanvasGenerationBatchMode, type CanvasNodeData } from "@/types/canvas";
 
 type Options = {
@@ -20,7 +21,8 @@ type Options = {
 };
 
 export function useCanvasBatchTable({ nodesRef, connectionsRef, setNodes, setConnections, setSelectedNodeIds, enqueueGenerationBatch }: Options) {
-    const { message, modal } = App.useApp();
+    const { message } = App.useApp();
+    const submissionLocks = useRef(new Map<string, Promise<unknown>>());
     const effectiveConfig = useEffectiveConfig();
     const isAiConfigReady = useConfigStore((state) => state.isAiConfigReady);
 
@@ -114,7 +116,7 @@ export function useCanvasBatchTable({ nodesRef, connectionsRef, setNodes, setCon
         if (nextTable !== table) patchTable(nodeId, { rows: nextTable.rows });
     }, [nodesRef, patchTable]);
 
-    const generateRows = useCallback(async (nodeId: string, requestedRowIds?: string[]) => {
+    const generateRows = useCallback((nodeId: string, requestedRowIds?: string[]) => runCanvasGenerationSubmissionOnce(submissionLocks.current, nodeId, async () => {
         const sourceNode = nodesRef.current.find((item) => item.id === nodeId);
         const table = sourceNode?.metadata?.batchTable;
         if (!sourceNode || !table) return;
@@ -137,17 +139,6 @@ export function useCanvasBatchTable({ nodesRef, connectionsRef, setNodes, setCon
             return !output?.metadata?.content;
         });
         if (!rows.length) return message.info("没有可提交的未完成任务，请检查参考图和提示词");
-        const confirmed = await new Promise<boolean>((resolve) => modal.confirm({
-            title: `确认提交 ${rows.length} 个批量图片任务`,
-            content: `模型：${modelDisplayName(effectiveConfig, imageModel)}；并发上限：${table.concurrency}。这些任务可能消耗积分或产生外部模型费用。`,
-            okText: "确认生成",
-            cancelText: "取消",
-            centered: true,
-            onOk: () => resolve(true),
-            onCancel: () => resolve(false),
-        }));
-        if (!confirmed) return;
-
         const imageSpec = NODE_DEFAULT_SIZE[CanvasNodeType.Image];
         const nextNodes = [...nodesRef.current];
         let nextConnections = [...connectionsRef.current];
@@ -191,7 +182,7 @@ export function useCanvasBatchTable({ nodesRef, connectionsRef, setNodes, setCon
         setConnections(nextConnections);
         setSelectedNodeIds(new Set(targets.map((target) => target.nodeId)));
         if (enqueueGenerationBatch(nodeId, "batch_image", targets, { concurrency: table.concurrency })) message.success(`${targets.length} 个任务已加入并发队列`);
-    }, [connectionsRef, effectiveConfig, enqueueGenerationBatch, isAiConfigReady, message, modal, nodesRef, setConnections, setNodes, setSelectedNodeIds]);
+    }), [connectionsRef, effectiveConfig, enqueueGenerationBatch, isAiConfigReady, message, nodesRef, setConnections, setNodes, setSelectedNodeIds]);
 
     return { addReferenceColumn, addRow, fillRowsFromConnections, generateRows, moveReferenceCell, patchTable, removeReferenceColumn, removeRow, reorderReferenceColumns, syncRowsFromConnections, updateRow };
 }

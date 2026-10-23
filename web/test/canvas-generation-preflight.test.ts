@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { confirmCanvasGeneration, waitForCanvasPreparation } from "@/pages/canvas/canvas-generation-preflight";
+import { waitForCanvasPreparation } from "@/pages/canvas/canvas-generation-preflight";
 import { runCanvasGenerationSubmissionOnce } from "@/lib/canvas/canvas-generation-submission";
 import { getClientDiagnosticEvents, recordDiagnosticEvent, setDiagnosticUserScope } from "@/services/diagnostics/client-diagnostics";
 
@@ -25,21 +25,6 @@ test("aborting preparation settles even when the read never resolves", async () 
     const pending = waitForCanvasPreparation(() => new Promise(() => {}), controller.signal);
     controller.abort();
     await expect(pending).rejects.toMatchObject({ name: "AbortError" });
-});
-
-test("external dialog close resolves cancellation; abort destroys the dialog", async () => {
-    let callbacks!: Parameters<Parameters<typeof confirmCanvasGeneration>[0]>[0];
-    let destroyed = 0;
-    const open = (input: typeof callbacks) => { callbacks = input; return { destroy: () => { destroyed++; } }; };
-    const first = confirmCanvasGeneration(open, new AbortController().signal);
-    callbacks.afterClose();
-    expect(await first).toBe(false);
-    const controller = new AbortController();
-    const second = confirmCanvasGeneration(open, controller.signal);
-    controller.abort();
-    callbacks.onOk();
-    expect(await second).toBe(false);
-    expect(destroyed).toBe(1);
 });
 
 test("routine background polling requests never evict generation action or error diagnostics from 500-event ring buffer", () => {

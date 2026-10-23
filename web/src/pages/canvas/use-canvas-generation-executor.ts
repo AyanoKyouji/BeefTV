@@ -36,7 +36,7 @@ import { executeAudioGeneration, executeVideoGeneration } from "./canvas-media-g
 import { executeTextGeneration } from "./canvas-text-generation-executor";
 import { canvasGenerationFailureMetadata, canvasGenerationRetryBlocked, canvasImageGenerationHasPendingResult, canvasImagePendingResultMessage } from "./canvas-generation-failure";
 import { createReferenceLinkResolver } from "@/components/generation-reference-links";
-import { confirmCanvasGeneration, waitForCanvasPreparation } from "./canvas-generation-preflight";
+import { waitForCanvasPreparation } from "./canvas-generation-preflight";
 
 type UseCanvasGenerationExecutorOptions = {
     projectId: string;
@@ -72,7 +72,6 @@ export type CanvasNodeGenerationOptions = {
     context?: { conversationId?: string; messageId?: string };
     retryContext?: { retryOf: string; attemptGroupId: string; clientOperationId: string };
     onTaskUpdate?: (task: GenerationTask) => void;
-    skipDuplicateConfirmation?: boolean;
 };
 
 export function useCanvasGenerationExecutor({
@@ -97,18 +96,6 @@ export function useCanvasGenerationExecutor({
     const effectiveConfig = useEffectiveConfig();
     const isAiConfigReady = useConfigStore((state) => state.isAiConfigReady);
     const submissionLocksRef = useRef(new Map<string, Promise<unknown>>());
-    const confirmDuplicateSubmission = useCallback(
-        (signal: AbortSignal) =>
-            confirmCanvasGeneration((callbacks) => modal.confirm({
-                    title: "再次生成相同内容？",
-                    content: "当前节点已使用相同提示词、模型、参数和参考素材提交过任务。再次生成会新建任务，并可能再次消耗积分。",
-                    okText: "仍然生成",
-                    cancelText: "取消",
-                    centered: true,
-                    ...callbacks,
-                }), signal),
-        [modal],
-    );
 
     return useCallback(
         (nodeId: string, mode: CanvasNodeGenerationMode, prompt: string, options?: CanvasNodeGenerationOptions) =>
@@ -341,16 +328,7 @@ export function useCanvasGenerationExecutor({
                             promptTemplateVariables: sourceNode?.metadata?.promptTemplateVariables,
                             context: generationContext,
                         });
-                        const duplicateConfirmationRequired = !options?.skipDuplicateConfirmation && !options?.retryContext && sourceNode?.metadata?.lastGenerationRequestFingerprint === requestFingerprint;
                         message.destroy(preparationMessageKey);
-                        stage = "duplicate_confirmation";
-                        if (duplicateConfirmationRequired) {
-                            diagnostic("generation_confirmation_waiting");
-                            if (!(await confirmDuplicateSubmission(controller.signal))) {
-                                diagnostic("generation_confirmation_cancelled");
-                                return;
-                            }
-                        }
 
                         const ratioWarning = mode === "video" && !usesWorkflowProvider ? seedanceReferenceRatioWarning({
                             ...resolveModelRequestConfig(generationConfig, generationConfig.model),
@@ -359,13 +337,7 @@ export function useCanvasGenerationExecutor({
                             operation: sourceNode?.metadata?.videoEditOperation,
                         }) : undefined;
                         if (ratioWarning) {
-                            stage = "ratio_confirmation";
-                            diagnostic("generation_confirmation_waiting");
-                            const accepted = await confirmCanvasGeneration((callbacks) => modal.confirm({ ...ratioWarning, centered: true, ...callbacks }), controller.signal);
-                            if (!accepted) {
-                                diagnostic("generation_confirmation_cancelled");
-                                return;
-                            }
+                            message.warning({ content: `${ratioWarning.title}：${ratioWarning.content}`, duration: 6 });
                         }
 
                         controller.signal.throwIfAborted();
@@ -420,7 +392,7 @@ export function useCanvasGenerationExecutor({
                             nodeId,
                             sourceNode,
                             // 收费输入保持确认时的快照；目标节点写回必须使用当前画布。
-                            // 另一目标可能已在重复生成确认等待期间完成，不能把整图回滚到旧结果。
+                            // 另一目标可能已在素材准备期间完成，不能把整图回滚到旧结果。
                             canvasNodes: nodesRef.current,
                             canvasConnections: connectionsRef.current,
                             prompt,
@@ -537,7 +509,6 @@ export function useCanvasGenerationExecutor({
             addedSkills,
             applyGenerationTaskResult,
             bindGenerationTask,
-            confirmDuplicateSubmission,
             domainProjectId,
             effectiveConfig,
             finishGenerationRequest,

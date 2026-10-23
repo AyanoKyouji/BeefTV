@@ -18,18 +18,20 @@ function harness() {
     } as typeof creationRuns;
     return { api, calls };
 }
-test("取消专业拆镜确认不会批准或提交任务", async () => {
+test("已取消的专业拆镜不会批准或提交任务", async () => {
     const h = harness();
-    expect(await submitStoryboardTask(request, { signal: new AbortController().signal, assertCurrent() {}, confirm: async () => false }, h.api)).toBeUndefined();
+    const controller = new AbortController();
+    controller.abort();
+    await expect(submitStoryboardTask(request, { signal: controller.signal, assertCurrent() {} }, h.api)).rejects.toMatchObject({ name: "AbortError" });
     expect(h.calls).toEqual(["prepare", "release"]);
 });
-test("确认后提交原配置对应的专业任务", async () => {
+test("点击生成直接提交原配置对应的专业任务", async () => {
     const h = harness();
-    expect((await submitStoryboardTask(request, { signal: new AbortController().signal, assertCurrent() {}, confirm: async () => true }, h.api))?.id).toBe("task");
+    expect((await submitStoryboardTask(request, { signal: new AbortController().signal, assertCurrent() {} }, h.api))?.id).toBe("task");
     expect(h.calls).toEqual(["prepare", "approve", "execute", "release"]);
 });
-test("确认期间编辑分镜会阻止提交", async () => {
+test("提交前分镜校验失败会阻止执行", async () => {
 	const h = harness();
-	await expect(submitStoryboardTask(request, { signal: new AbortController().signal, assertCurrent() { throw new Error("分镜已编辑"); }, confirm: async () => true }, h.api)).rejects.toThrow();
+	await expect(submitStoryboardTask(request, { signal: new AbortController().signal, assertCurrent() { throw new Error("分镜已编辑"); } }, h.api)).rejects.toThrow();
 	expect(h.calls).toEqual(["prepare", "release"]);
 });

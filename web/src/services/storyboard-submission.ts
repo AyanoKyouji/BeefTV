@@ -1,12 +1,11 @@
 import { nanoid } from "nanoid";
-import { creationRuns, type CreationSubmission } from "./api/creation-runs";
+import { creationRuns } from "./api/creation-runs";
 import type { CreateTaskInput } from "./api/task-center";
 
 // Both the node composer and Agent submit the same locally admitted task.
 export async function submitStoryboardTask(request: CreateTaskInput, options: {
     signal: AbortSignal;
     assertCurrent: () => void;
-    confirm: (submission: CreationSubmission) => Promise<boolean>;
 }, api = creationRuns) {
     const { signal, assertCurrent } = options;
     const detail = await api.create({ clientKey: `storyboard:${nanoid()}`, canvasId: request.projectId, state: { kind: "storyboard" } }, signal);
@@ -18,7 +17,6 @@ export async function submitStoryboardTask(request: CreateTaskInput, options: {
     }, 15_000);
     try {
         const submission = await api.prepare(run.id, { ...guard, itemKey: "storyboard", request }, signal);
-        if (!await options.confirm(submission)) return undefined;
         signal.throwIfAborted();
         if (connectionError) throw connectionError;
         assertCurrent();

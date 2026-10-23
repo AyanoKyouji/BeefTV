@@ -1,4 +1,5 @@
-import { CanvasNodeType, type CanvasConnection, type CanvasNodeData, type StoryboardRow } from "@/types/canvas";
+import { CanvasNodeType, type CanvasConnection, type CanvasNodeData, type StoryboardRow, type CanvasGenerationBatchItem } from "@/types/canvas";
+import { storyboardMediaBatchItem, storyboardMediaBusy } from "@/lib/canvas/canvas-storyboard-generation-state";
 
 export type StoryboardPipelineItemState = "missing" | "idle" | "loading" | "success" | "error";
 
@@ -18,6 +19,8 @@ export type StoryboardPipelineRow = {
     imageState: StoryboardPipelineItemState;
     videoNode?: CanvasNodeData;
     videoState: StoryboardPipelineItemState;
+    imageBatchItem?: CanvasGenerationBatchItem;
+    videoBatchItem?: CanvasGenerationBatchItem;
 };
 
 export type CanvasStoryboardPipelineProgress = {
@@ -35,12 +38,16 @@ export function deriveStoryboardPipelineProgress(scriptNode: CanvasNodeData, nod
     const pipelineRows = rows.map((row): StoryboardPipelineRow => {
         const imageNode = row.imageNodeId ? nodeById.get(row.imageNodeId) : undefined;
         const videoNode = row.videoNodeId ? nodeById.get(row.videoNodeId) : undefined;
+        const imageBatchItem = storyboardMediaBatchItem(scriptNode, imageNode?.id, "image");
+        const videoBatchItem = storyboardMediaBatchItem(scriptNode, videoNode?.id, "video");
         return {
             row,
             imageNode: imageNode?.type === CanvasNodeType.Image ? imageNode : undefined,
-            imageState: nodePipelineState(imageNode, CanvasNodeType.Image),
+            imageState: nodePipelineState(imageNode, CanvasNodeType.Image, imageBatchItem),
             videoNode: videoNode?.type === CanvasNodeType.Video ? videoNode : undefined,
-            videoState: nodePipelineState(videoNode, CanvasNodeType.Video),
+            videoState: nodePipelineState(videoNode, CanvasNodeType.Video, videoBatchItem),
+            imageBatchItem,
+            videoBatchItem,
         };
     });
     const imageNodes = pipelineRows.flatMap((item) => item.imageNode ? [item.imageNode] : []);
@@ -60,10 +67,10 @@ export function deriveStoryboardPipelineProgress(scriptNode: CanvasNodeData, nod
     };
 }
 
-function nodePipelineState(node: CanvasNodeData | undefined, expectedType: CanvasNodeType): StoryboardPipelineItemState {
+function nodePipelineState(node: CanvasNodeData | undefined, expectedType: CanvasNodeType, batchItem?: CanvasGenerationBatchItem): StoryboardPipelineItemState {
     if (!node || node.type !== expectedType) return "missing";
     if (node.metadata?.status === "success" && node.metadata.content) return "success";
-    if (node.metadata?.status === "loading") return "loading";
+    if (storyboardMediaBusy(node, batchItem)) return "loading";
     if (node.metadata?.status === "error") return "error";
     return "idle";
 }

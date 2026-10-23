@@ -12,6 +12,13 @@ import { StoryboardAssetsCell } from "@/components/canvas/storyboard-assets-cell
 import { StoryboardShotCard, StoryboardShotDetails } from "@/components/canvas/storyboard-shot-card";
 import { StoryboardSortableShotList } from "@/components/canvas/storyboard-sortable-shot-list";
 import { reorderStoryboardRows } from "@/lib/canvas/canvas-storyboard-order";
+import { storyboardGenerationRows } from "@/lib/canvas/canvas-storyboard-regeneration";
+import { storyboardMediaConfig, storyboardMediaModel, storyboardSettingsValuePatch, type StoryboardMediaSettings } from "@/lib/canvas/canvas-storyboard-models";
+import { CanvasImageSettingsPopover } from "@/components/canvas/canvas-image-settings-popover";
+import { CanvasVideoSettingsPopover } from "@/components/canvas/canvas-video-settings-popover";
+import { videoResolutionLabel, videoSizeLabel } from "@/components/video-settings-panel";
+import { CanvasH3Controls } from "@/components/canvas/canvas-h3-controls";
+import { isH3Model } from "@/lib/h3-video";
 import { AppModal } from "@/components/ui/product/app-modal";
 import { ModelPicker } from "@/components/model-picker";
 import { buildGenerationConfig } from "@/lib/canvas/canvas-project-generation";
@@ -93,6 +100,8 @@ export function CanvasScriptNodeContent({
     onGenerateImages,
     onGenerateVideos,
     onVideoInputModeChange,
+    onMediaModelChange,
+    onMediaSettingsChange,
     onMergeVideos,
     onCreateActionBoards,
     onRetryBatch,
@@ -120,9 +129,11 @@ export function CanvasScriptNodeContent({
     onLocate: (node: CanvasNodeData) => void;
     onCreateImageNodes: () => void;
     onCreateVideoNodes: () => void;
-    onGenerateImages: (rowIds: string[]) => void;
-    onGenerateVideos: (rowIds: string[]) => void;
+    onGenerateImages: (rowIds: string[], regenerate?: boolean) => void;
+    onGenerateVideos: (rowIds: string[], regenerate?: boolean) => void;
     onVideoInputModeChange: (mode: StoryboardVideoInputMode) => void;
+    onMediaModelChange: (kind: "image" | "video", model: string) => void;
+    onMediaSettingsChange: (kind: "image" | "video", patch: StoryboardMediaSettings) => void;
     onMergeVideos: () => void;
     onCreateActionBoards: () => void;
     onRetryBatch: (batchId: string) => void;
@@ -182,12 +193,13 @@ export function CanvasScriptNodeContent({
               : "";
     const [batchDetailsOpen, setBatchDetailsOpen] = useState(false);
     const [moreMenuOpen, setMoreMenuOpen] = useState(false);
-    const pipelineDisabled = !rows.length || node.metadata?.status === "loading" || hasActiveBatchItems;
+    const pipelineDisabled = !rows.length || node.metadata?.status === "loading";
     const missingImages = Math.max(0, pipeline.images.total - pipeline.images.created);
     const missingVideos = Math.max(0, pipeline.videos.total - pipeline.videos.created);
     const canMerge = pipeline.successfulVideoNodeIds.length >= 2 && pipeline.final.success === 0 && pipeline.final.loading === 0;
-    const incompleteImageRowIds = pipeline.rows.filter((item) => item.imageState !== "success").map((item) => item.row.id);
-    const incompleteVideoRowIds = pipeline.rows.filter((item) => item.videoState !== "success").map((item) => item.row.id);
+    const incompleteImageRowIds = storyboardGenerationRows(node, nodes, rows.map(row => row.id), "image").map(row => row.id);
+    const incompleteVideoRowIds = storyboardGenerationRows(node, nodes, rows.map(row => row.id), "video")
+        .filter(row => videoInputMode !== "keyframe" || pipeline.rows.some(item => item.row.id === row.id && item.imageNode?.metadata?.content)).map(row => row.id);
     const moreMenuItems: MenuProps["items"] = [
         {
             key: "video-input",
@@ -201,8 +213,8 @@ export function CanvasScriptNodeContent({
         ...(!simpleMode
             ? [
                   { type: "divider" as const },
-                  { key: "create-image-nodes", icon: <Grid3X3 className="size-3.5" />, label: missingImages ? `创建 ${missingImages} 个图片节点` : "图片节点已创建", disabled: pipelineDisabled || missingImages === 0, onClick: () => onCreateImageNodes() },
-                  { key: "create-video-nodes", icon: <Film className="size-3.5" />, label: missingVideos ? `创建 ${missingVideos} 个视频节点` : "视频节点已创建", disabled: pipelineDisabled || missingVideos === 0, onClick: () => onCreateVideoNodes() },
+                  { key: "create-image-nodes", icon: <Grid3X3 className="size-3.5" />, label: missingImages ? `创建 ${missingImages} 个图片节点` : "图片节点已创建", disabled: pipelineDisabled || hasActiveBatchItems || missingImages === 0, onClick: () => onCreateImageNodes() },
+                  { key: "create-video-nodes", icon: <Film className="size-3.5" />, label: missingVideos ? `创建 ${missingVideos} 个视频节点` : "视频节点已创建", disabled: pipelineDisabled || hasActiveBatchItems || missingVideos === 0, onClick: () => onCreateVideoNodes() },
                   { key: "action-boards", icon: <Grid3X3 className="size-3.5" />, label: "生成动作拆分 12 宫格", disabled: !rows.length || hasActiveBatchItems, onClick: () => onCreateActionBoards() },
               ]
             : []),
@@ -288,8 +300,9 @@ export function CanvasScriptNodeContent({
                 </Modal>
             ) : null}
             <div className="thin-scrollbar flex h-12 shrink-0 items-center gap-2 overflow-x-auto border-b px-3" data-canvas-wheel-scroll style={{ borderColor: theme.node.stroke }} onWheel={(event) => event.stopPropagation()} onPointerDown={(event) => event.stopPropagation()} onMouseDown={(event) => event.stopPropagation()}>
-                <Button size="small" icon={<ImageIcon className="size-3.5" />} disabled={pipelineDisabled || !pipeline.images.incomplete} onClick={() => onGenerateImages(incompleteImageRowIds)}>补齐分镜图</Button>
-                <Button size="small" icon={<Film className="size-3.5" />} disabled={pipelineDisabled || !pipeline.videos.incomplete} onClick={() => onGenerateVideos(incompleteVideoRowIds)}>生成镜头视频</Button>
+                <StoryboardModelPickers node={node} onChange={onMediaModelChange} onSettingsChange={onMediaSettingsChange} />
+                <Button size="small" icon={<ImageIcon className="size-3.5" />} disabled={pipelineDisabled || !incompleteImageRowIds.length} onClick={() => onGenerateImages(incompleteImageRowIds)}>补齐分镜图</Button>
+                <Button size="small" icon={<Film className="size-3.5" />} disabled={pipelineDisabled || !incompleteVideoRowIds.length} onClick={() => onGenerateVideos(incompleteVideoRowIds)}>生成镜头视频</Button>
                 <Tooltip title={canMerge ? `按镜头顺序合并 ${pipeline.successfulVideoNodeIds.length} 段视频` : "至少需要 2 段已完成的视频"}><span><Button size="small" icon={<Merge className="size-3.5" />} disabled={!canMerge} onClick={onMergeVideos}>合并成片</Button></span></Tooltip>
                 {batch && hasWaitingBatchItems ? <Button size="small" onClick={() => onStopBatch(batch.id)}>停止剩余任务</Button> : null}
                 <span className="min-w-0 flex-1" />
@@ -313,8 +326,8 @@ export function CanvasScriptNodeContent({
                 {rows.length ? (
                     pipeline.rows.map((item) => (
                         <div key={item.row.id} className="px-3 py-1.5" style={{ height: STORYBOARD_ROW_HEIGHT }}>
-                            <StoryboardShotCard item={item} nodes={nodes} batchItem={batchItemByRowId.get(item.row.id)} batchMode={batch?.mode} disabled={pipelineDisabled}
-                                onEdit={() => onOpen(item.row.id)} onGenerateImages={() => onGenerateImages([item.row.id])} onGenerateVideos={() => onGenerateVideos([item.row.id])}
+                            <StoryboardShotCard item={item} nodes={nodes} videoInputMode={videoInputMode} disabled={pipelineDisabled}
+                                onEdit={() => onOpen(item.row.id)} onGenerateImages={() => onGenerateImages([item.row.id], item.imageState === "success")} onGenerateVideos={() => onGenerateVideos([item.row.id], item.videoState === "success")}
                                 onCancel={onCancelGeneration} onLocate={onLocate} />
                         </div>
                     ))
@@ -589,6 +602,8 @@ export function CanvasScriptEditor({
     onGenerateImages,
     onGenerateVideos,
     onVideoInputModeChange,
+    onMediaModelChange,
+    onMediaSettingsChange,
 }: {
     node: CanvasNodeData | null;
     nodes: CanvasNodeData[];
@@ -603,9 +618,11 @@ export function CanvasScriptEditor({
     onClose: () => void;
     onUpdateRows: (rows: StoryboardRow[]) => void;
     onVisibleColumnsChange: (columns: StoryboardColumn[]) => void;
-    onGenerateImages: (rowIds: string[]) => void;
-    onGenerateVideos: (rowIds: string[]) => void;
+    onGenerateImages: (rowIds: string[], regenerate?: boolean) => void;
+    onGenerateVideos: (rowIds: string[], regenerate?: boolean) => void;
     onVideoInputModeChange: (mode: StoryboardVideoInputMode) => void;
+    onMediaModelChange: (kind: "image" | "video", model: string) => void;
+    onMediaSettingsChange: (kind: "image" | "video", patch: StoryboardMediaSettings) => void;
 }) {
     const [query, setQuery] = useState("");
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -622,8 +639,7 @@ export function CanvasScriptEditor({
         setSelectedIds([]);
         setActiveRowId(initialRowId);
     }, [open, node?.id, initialRowId]);
-    const hasActiveBatch = Boolean(batch?.items.some((item) => ["waiting", "submitting", "queued", "running"].includes(item.status)));
-    const generationDisabled = node?.metadata?.status === "loading" || hasActiveBatch;
+    const generationDisabled = node?.metadata?.status === "loading";
     const filteredRows = useMemo(() => {
         const keyword = query.trim().toLowerCase();
         return keyword
@@ -640,6 +656,9 @@ export function CanvasScriptEditor({
     const visibleItems = pipeline?.rows.filter((item) => visibleRowIds.has(item.row.id)) || [];
     const activeItem = visibleItems.find((item) => item.row.id === activeRowId) || visibleItems[0];
     const targetIds = view === "table" && selectedIds.length ? selectedIds : filteredRows.map((row) => row.id);
+    const imageTargetIds = node ? storyboardGenerationRows(node, nodes, targetIds, "image").map(row => row.id) : [];
+    const videoTargetIds = node ? storyboardGenerationRows(node, nodes, targetIds, "video")
+        .filter(row => videoInputMode !== "keyframe" || nodeById.get(row.imageNodeId || "")?.metadata?.content).map(row => row.id) : [];
     useEffect(() => {
         setSelectedIds((current) => {
             const next = current.filter((id) => rows.some((row) => row.id === id));
@@ -728,12 +747,16 @@ export function CanvasScriptEditor({
                 <Button icon={<Plus className="size-4" />} onClick={() => { const row = editorRow(rows.length + 1); onUpdateRows([...rows, row]); setActiveRowId(row.id); }}>
                     新增镜头
                 </Button>
-                <Button icon={<ImageIcon className="size-4" />} disabled={generationDisabled || !targetIds.length || !pipeline?.rows.some((item) => targetIds.includes(item.row.id) && item.imageState !== "success")} onClick={() => onGenerateImages(pipeline?.rows.filter((item) => targetIds.includes(item.row.id) && item.imageState !== "success").map((item) => item.row.id) || [])}>
+                <Button icon={<ImageIcon className="size-4" />} disabled={generationDisabled || !imageTargetIds.length} onClick={() => onGenerateImages(imageTargetIds)}>
                     补齐分镜图
                 </Button>
-                <Button icon={<Film className="size-4" />} disabled={generationDisabled || !targetIds.length || !pipeline?.rows.some((item) => targetIds.includes(item.row.id) && item.videoState !== "success")} onClick={() => onGenerateVideos(pipeline?.rows.filter((item) => targetIds.includes(item.row.id) && item.videoState !== "success").map((item) => item.row.id) || [])}>生成镜头视频</Button>
+                <Button icon={<Film className="size-4" />} disabled={generationDisabled || !videoTargetIds.length} onClick={() => onGenerateVideos(videoTargetIds)}>生成镜头视频</Button>
                 <Button icon={<Merge className="size-4" />} disabled={!pipeline || pipeline.successfulVideoNodeIds.length < 2 || pipeline.final.loading > 0 || pipeline.final.success > 0} onClick={onMergeVideos}>合并成片</Button>
                 {batch && batch.items.some((item) => item.status === "waiting" || item.status === "submitting") ? <Button onClick={() => onStopBatch(batch.id)}>停止剩余任务</Button> : null}
+            </div>
+            <div className="mb-3 flex flex-wrap items-center gap-3">
+                <StoryboardModelPickers node={node} onChange={onMediaModelChange} onSettingsChange={onMediaSettingsChange} />
+                <span className="text-xs text-foreground/55">用于接下来生成的分镜图和视频，包含重新生成。</span>
             </div>
             <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-foreground/60">
                 <span>图片 {pipeline?.images.success || 0}/{rows.length} · 视频 {pipeline?.videos.success || 0}/{rows.length}</span>
@@ -768,8 +791,8 @@ export function CanvasScriptEditor({
                     <StoryboardSortableShotList key={node?.id} rows={rows} visibleRows={filteredRows} selectedRowId={activeItem?.row.id} onSelect={setActiveRowId} onUpdateRows={onUpdateRows}
                         renderRow={(row, select) => {
                             const item = visibleItems.find((entry) => entry.row.id === row.id);
-                            return item ? <StoryboardShotCard item={item} nodes={nodes} selected={row.id === activeItem?.row.id} reorderable={row.id === activeItem?.row.id} batchMode={batch?.mode} batchItem={batch?.items.find((entry) => entry.rowId === row.id)} disabled={generationDisabled}
-                                onEdit={select} onGenerateImages={() => onGenerateImages([row.id])} onGenerateVideos={() => onGenerateVideos([row.id])} onCancel={onCancelGeneration} onLocate={onLocate} /> : null;
+                            return item ? <StoryboardShotCard item={item} nodes={nodes} selected={row.id === activeItem?.row.id} reorderable={row.id === activeItem?.row.id} videoInputMode={videoInputMode} disabled={generationDisabled}
+                                onEdit={select} onGenerateImages={() => onGenerateImages([row.id], item.imageState === "success")} onGenerateVideos={() => onGenerateVideos([row.id], item.videoState === "success")} onCancel={onCancelGeneration} onLocate={onLocate} /> : null;
                         }} />
                     {activeItem ? <div className="space-y-3">
                         <StoryboardShotDetails item={activeItem} nodes={nodes} onUpdate={(patch) => updateRow(activeItem.row.id, patch)} />
@@ -784,6 +807,26 @@ export function CanvasScriptEditor({
             </div>}
         </AppModal>
     );
+}
+
+function StoryboardModelPickers({ node, onChange, onSettingsChange }: { node: CanvasNodeData | null; onChange: (kind: "image" | "video", model: string) => void; onSettingsChange: (kind: "image" | "video", patch: StoryboardMediaSettings) => void }) {
+    const config = useEffectiveConfig();
+    return <>{(["image", "video"] as const).map((kind) => {
+        const mediaConfig = storyboardMediaConfig(config, node, kind);
+        const onConfigChange = (key: keyof typeof config, value: string) => onSettingsChange(kind, storyboardSettingsValuePatch(key, value));
+        return <div key={kind} className="flex shrink-0 items-center gap-1.5" role="group" aria-label={kind === "image" ? "分镜图片模型及参数" : "分镜视频模型及参数"}>
+        <span className="whitespace-nowrap text-xs text-foreground/60">{kind === "image" ? "图片模型" : "视频模型"}</span>
+        <ModelPicker config={config} value={storyboardMediaModel(config, node, kind)} capability={kind} placeholder={kind === "image" ? "选择分镜图片模型" : "选择分镜视频模型"}
+            className="!h-7 !w-36 !min-w-0 !text-xs" onChange={(model) => onChange(kind, model)} onMissingConfig={() => navigateToSettings({ continueCreation: true })} />
+        {mediaConfig.model ? kind === "image" ? <CanvasImageSettingsPopover key={mediaConfig.model} config={mediaConfig} onConfigChange={onConfigChange} placement="bottomLeft" showCount={false} buttonClassName="!h-7 !max-w-40 !px-2 !text-xs" />
+            : <CanvasVideoSettingsPopover key={mediaConfig.model} config={mediaConfig} onConfigChange={onConfigChange} placement="bottomLeft" buttonClassName="!h-7 !max-w-48 !px-2 !text-xs"
+                summaryOverride={node?.metadata?.storyboardVideoSettings?.seconds ? undefined : [mediaConfig.vquality && videoResolutionLabel(mediaConfig.vquality), mediaConfig.size && videoSizeLabel(mediaConfig.size), "按镜头时长"].filter(Boolean).join(" · ")}>
+                <Button size="small" aria-pressed={!node?.metadata?.storyboardVideoSettings?.seconds} onClick={() => onSettingsChange("video", { seconds: undefined })}>按各镜头时长生成</Button>
+                <p className="mt-2 text-xs text-foreground/55">选择秒数后统一用于接下来的生成；镜头计划时长不变。实际时长按模型支持范围调整，首帧模式的比例可能跟随图片。</p>
+                {isH3Model(mediaConfig.model) ? <CanvasH3Controls model={mediaConfig.model} value={node?.metadata?.storyboardVideoSettings?.videoH3Options} onChange={(videoH3Options) => onSettingsChange("video", { videoH3Options })} /> : null}
+            </CanvasVideoSettingsPopover> : null}
+    </div>;
+    })}</>;
 }
 
 function SmallButton({ title, children, onClick, disabled }: { title: string; children: ReactNode; onClick: () => void; disabled?: boolean }) {

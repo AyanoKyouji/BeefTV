@@ -25,26 +25,3 @@ export function waitForCanvasPreparation<T>(read: () => Promise<T>, signal: Abor
         }).then((value) => finish(() => resolve(value)), (error) => finish(() => reject(error)));
     });
 }
-
-export function confirmCanvasGeneration(
-    open: (callbacks: { onOk: () => void; onCancel: () => void; afterClose: () => void }) => { destroy: () => void },
-    signal: AbortSignal,
-): Promise<boolean> {
-    return new Promise((resolve) => {
-        let dialog: { destroy: () => void } | undefined;
-        const finish = (accepted: boolean) => {
-            signal.removeEventListener("abort", abort);
-            resolve(accepted && !signal.aborted);
-        };
-        const abort = () => { finish(false); dialog?.destroy(); };
-        if (signal.aborted) return finish(false);
-        signal.addEventListener("abort", abort, { once: true });
-        try {
-            dialog = open({ onOk: () => finish(true), onCancel: () => finish(false), afterClose: () => finish(false) });
-            if (signal.aborted) dialog.destroy();
-        } catch (error) {
-            signal.removeEventListener("abort", abort);
-            throw error;
-        }
-    });
-}

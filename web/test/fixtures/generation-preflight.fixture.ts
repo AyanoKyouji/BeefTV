@@ -76,17 +76,10 @@ await generate("video", "video", "private prompt");
 assert.equal(dispatched, 1);
 assert.equal(nodesRef.current[0].metadata.content, "old-result");
 const repeat = generate("video", "video", "private prompt");
-await tick();
-assert.equal(confirmations.length, 1);
-confirmations[0].afterClose();
 await repeat;
-assert.equal(dispatched, 1);
-assert.equal(requests.size, 0);
-const confirmed = generate("video", "video", "private prompt");
-await tick();
-confirmations[1].onOk();
-await confirmed;
+assert.equal(confirmations.length, 0, "repeat generation must not open a confirmation");
 assert.equal(dispatched, 2);
+assert.equal(requests.size, 0);
 assert.equal(loading.size, 0);
 // Accelerate only the preparation deadline; exercise the real hook and guard.
 const realSetTimeout = globalThis.setTimeout;
@@ -113,6 +106,6 @@ assert(failedDiag.message.includes("model=fixture"), "expected model in diagnost
 assert(failedDiag.message.includes("refs=i:0,v:0,a:0,c:0"), "expected ref counts in diagnostic message");
 assert(failedDiag.message.includes("参数不兼容"), "expected failure reason in diagnostic message");
 assert(diagnostics.some((e) => e.code === "generation_preflight_timeout"));
-assert(diagnostics.some((e) => e.code === "generation_confirmation_cancelled"));
-console.log("PASS: preflight lifecycle, duplicate lock, abort fencing, validation, closed dialog retry, private diagnostics");
+assert(!diagnostics.some((e) => e.code === "generation_confirmation_waiting"));
+console.log("PASS: preflight lifecycle, duplicate lock, abort fencing, validation, direct retry, private diagnostics");
 

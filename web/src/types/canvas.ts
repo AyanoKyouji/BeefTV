@@ -454,6 +454,10 @@ export type CanvasNodeMetadata = {
     storyboardShotDuration?: StoryboardShotDuration;
     storyboardShotCount?: StoryboardShotCount;
     storyboardVideoInputMode?: StoryboardVideoInputMode;
+    storyboardImageModel?: string;
+    storyboardVideoModel?: string;
+    storyboardImageSettings?: Pick<CanvasNodeMetadata, "size" | "quality" | "transparentBackground">;
+    storyboardVideoSettings?: Pick<CanvasNodeMetadata, "size" | "seconds" | "vquality" | "generateAudio" | "watermark" | "arkPrivateAssetUpload" | "videoH3Options">;
     storyboardComposerHeight?: number;
     generationBatches?: CanvasGenerationBatch[];
     batchTable?: CanvasBatchTableData;
